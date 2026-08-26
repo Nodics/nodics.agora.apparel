@@ -7,7 +7,7 @@ UI package and not a backend module.
 ## Ownership
 
 - Owns apparel storefront presentation, responsive UX, browser state, and tests.
-- Consumes renderer contracts from `domain.commerce.ui`.
+- Owns the renderer contract required by this reusable storefront template.
 - Consumes apparel content, product, price, inventory, media, and publishing
   data from Kickoff/Online backend APIs.
 - Must not carry Electronics or Telco renderer implementations.
