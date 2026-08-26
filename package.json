@@ -1,0 +1,36 @@
+{
+  "name": "nodics.agora.apparel",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Nodics Agora Apparel customer commerce storefront.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "test:commerce": "vitest run --run src/api/commerceClient.test.ts src/api/engagementClient.test.ts src/cart/cartState.test.tsx src/checkout/checkoutValidation.test.ts src/checkout/paymentResult.test.ts src/media/productVisual.test.ts src/order/orderLifecycle.test.ts test/content/frontendContentOwnershipContract.test.ts test/agoraJourneyContract.test.tsx",
+    "test:domain": "vitest run --run src/rendering/rendererRegistry.test.tsx test/kickoffRendererMappingContract.test.ts",
+    "typecheck": "tsc -b",
+    "verify": "npm run typecheck && npm run test:commerce && npm run test:domain && npm run build"
+  },
+  "dependencies": {
+    "domain.commerce.ui": "file:../domain.commerce.ui",
+    "@vitejs/plugin-react": "^5.0.0",
+    "embla-carousel-auto-scroll": "^8.6.0",
+    "embla-carousel-react": "^8.6.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.1.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.0",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "jsdom": "^26.1.0",
+    "vitest": "^3.2.0"
+  }
+}
