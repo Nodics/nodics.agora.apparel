@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ProductCardView } from '../components/ProductCardView';
 import '../composition/apparel';
-import { RendererRegistry } from 'domain.commerce.ui';
+import { RendererRegistry } from '../domainCommerceUi';
 import { PRODUCT_CARD_RENDERER, storefrontRendererRegistry } from './storefrontRendererRegistry';
 
 const actions = { onAdd: () => undefined, onCompare: () => undefined, onOpen: () => undefined, onQuickView: () => undefined, onWishlist: () => undefined };

@@ -14,7 +14,6 @@
     "verify": "npm run typecheck && npm run test:commerce && npm run test:domain && npm run build"
   },
   "dependencies": {
-    "domain.commerce.ui": "file:../domain.commerce.ui",
     "@vitejs/plugin-react": "^5.0.0",
     "embla-carousel-auto-scroll": "^8.6.0",
     "embla-carousel-react": "^8.6.0",

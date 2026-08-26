@@ -1,7 +1,7 @@
 import { CommerceProductCardView } from '../commerce/components/CommerceProductCardView';
 import type { ProductCardViewProps } from '../components/ProductCardView';
 import type { ProductCard } from '../api/commerceClient';
-import { RendererRegistry, type StorefrontDomain } from 'domain.commerce.ui';
+import { RendererRegistry, type StorefrontDomain } from '../domainCommerceUi';
 
 export const PRODUCT_CARD_RENDERER = 'commerce.product.card';
 export const storefrontRendererRegistry = new RendererRegistry<ProductCardViewProps>()
