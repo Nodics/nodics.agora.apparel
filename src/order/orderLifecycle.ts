@@ -52,7 +52,7 @@ export function lifecyclePayload(
     reasonCode: input.reasonCode || lifecycleReason(requestType),
     policyVersion: '1',
     evidence: {
-      source: 'nodics.agora',
+      source: 'nodics.agora.apparel',
       customerSubmitted: true,
       quantity: input.quantity,
       returnMethod: input.returnMethod,
