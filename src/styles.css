@@ -4083,6 +4083,38 @@ select {
   letter-spacing: 0;
 }
 
+.agora-unpublished-shell {
+  align-items: center;
+  background: #f5f1ea;
+  display: flex;
+  min-height: 100vh;
+  padding: clamp(1.5rem, 4vw, 4rem);
+}
+
+.storefront-unpublished-state {
+  background: #fffaf0;
+  border: 1px solid rgba(33, 31, 26, 0.14);
+  box-shadow: 0 20px 60px rgba(33, 31, 26, 0.08);
+  display: grid;
+  gap: 1rem;
+  margin: 0 auto;
+  max-width: 760px;
+  padding: clamp(1.5rem, 4vw, 3rem);
+}
+
+.storefront-unpublished-state h1 {
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 0.98;
+  margin: 0;
+}
+
+.storefront-unpublished-state p {
+  color: rgba(33, 31, 26, 0.74);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
 .agora-shell h1,
 .agora-shell h2,
 .agora-shell h3,

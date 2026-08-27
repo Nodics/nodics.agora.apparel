@@ -54,6 +54,40 @@ function agoraCmsPageResponse() {
         },
         components: [
           cmsComponent(
+            "agoraApparelGlobalHeader",
+            "agora.header",
+            {
+              logoText: "NODICS",
+              subtitle: "AGORA",
+              rootCollectionCode: "agoraWomen",
+              searchPlaceholder: "Search dresses, bags, shirts...",
+              searchEnabled: true,
+              cartPreviewEnabled: true,
+              accountPreviewEnabled: true,
+              wishlistPreviewEnabled: true,
+              utilityLinks: [
+                { label: "+1 315-666-6688", path: "tel:+13156666688" },
+                { label: "support@nodics.com", path: "mailto:support@nodics.com" },
+                { label: "Our Store", collectionCode: "agoraWomen" },
+              ],
+              preferences: [
+                { label: "USD", path: "#currency" },
+                { label: "English", path: "#language" },
+              ],
+              navigationItems: [
+                { label: "Home", path: "/" },
+                { label: "Shop", collectionCode: "agoraWomen", dropdown: true },
+                { label: "New in", collectionCode: "agoraNewArrivals" },
+                { label: "Clothing", collectionCode: "agoraWomenTops", dropdown: true },
+                {
+                  label: "Bags & Accessories",
+                  collectionCode: "agoraWomenAccessories",
+                },
+              ],
+            },
+            0,
+          ),
+          cmsComponent(
             "agoraHomeHeroExperience",
             "agora.heroCarousel",
             {
@@ -99,7 +133,7 @@ function agoraCmsPageResponse() {
                 },
               ],
             },
-            0,
+            1,
           ),
           cmsComponent(
             "agoraHomeServiceTicker",
@@ -110,7 +144,7 @@ function agoraCmsPageResponse() {
                 { label: "Returns are free within 14 days" },
               ],
             },
-            1,
+            2,
           ),
           cmsComponent(
             "agoraHomeCollectionGrid",
@@ -142,7 +176,7 @@ function agoraCmsPageResponse() {
                 },
               ],
             },
-            2,
+            3,
           ),
           cmsComponent(
             "agoraTopPicksProductRail",
@@ -152,7 +186,7 @@ function agoraCmsPageResponse() {
               heading: "Fresh styles just in",
               pageSize: 4,
             },
-            3,
+            4,
           ),
           cmsComponent(
             "agoraEditorialPromoGrid",
@@ -170,7 +204,7 @@ function agoraCmsPageResponse() {
                 },
               ],
             },
-            4,
+            5,
           ),
           cmsComponent(
             "agoraSpecialOfferSplit",
@@ -186,7 +220,7 @@ function agoraCmsPageResponse() {
                 collectionCode: "agoraWomenSale",
               },
             },
-            5,
+            6,
           ),
           cmsComponent(
             "agoraBestSellingProductRail",
@@ -196,7 +230,7 @@ function agoraCmsPageResponse() {
               heading: "Browse our top trending",
               pageSize: 4,
             },
-            6,
+            7,
           ),
           cmsComponent(
             "agoraCustomerServicePromiseGrid",
@@ -209,7 +243,7 @@ function agoraCmsPageResponse() {
                 },
               ],
             },
-            7,
+            8,
           ),
           cmsComponent(
             "agoraCustomerTestimonials",
@@ -229,7 +263,7 @@ function agoraCmsPageResponse() {
                 },
               ],
             },
-            8,
+            9,
           ),
           cmsComponent(
             "agoraSocialGallery",
@@ -244,7 +278,7 @@ function agoraCmsPageResponse() {
                 },
               ],
             },
-            9,
+            10,
           ),
           cmsComponent(
             "agoraGlobalFooterExperience",
@@ -265,9 +299,11 @@ function agoraCmsPageResponse() {
                 placeholder: "Enter your email",
                 buttonLabel: "Subscribe",
               },
+              copyright: "© 2026 Nodics. All rights reserved.",
+              brandLabel: "Nodics Agora",
               legalLinks: ["Privacy", "Terms", "Cookies"],
             },
-            10,
+            11,
           ),
         ],
       },
@@ -685,12 +721,9 @@ describe("Agora storefront journey", () => {
     const storefrontNavigation = within(
       screen.getByRole("navigation", { name: "Storefront navigation" }),
     );
-    const domainCategoryButton =
-      storefrontNavigation.queryByRole("button", {
-        name: "Bags & Accessories",
-      }) ??
-      storefrontNavigation.queryByRole("button", { name: "Computing" }) ??
-      storefrontNavigation.queryByRole("button", { name: "Postpaid" });
+    const domainCategoryButton = storefrontNavigation.queryByRole("button", {
+      name: "Bags & Accessories",
+    });
     expect(domainCategoryButton).toBeTruthy();
     const domainCategoryLabel = domainCategoryButton?.textContent?.trim() ?? "";
     await user.click(domainCategoryButton as HTMLElement);
@@ -1280,5 +1313,34 @@ describe("Agora storefront journey", () => {
         String(target).includes("/customer/checkouts/place"),
       ),
     ).toBe(false);
+  });
+
+  it("shows an unpublished state instead of a local storefront when Online CMS has no page", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (isCmsPageRequest(input))
+          return new Response(
+            JSON.stringify({
+              message: "CMS publication pointer was not found: content was not found",
+            }),
+            { status: 404, headers: { "content-type": "application/json" } },
+          );
+        return jsonResponse({ data: { products: [] } });
+      }),
+    );
+
+    render(<StorefrontPage />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", {
+          name: "We are getting the storefront ready.",
+        }),
+      ).toBeTruthy(),
+    );
+    expect(screen.queryByRole("link", { name: "Open Axis publishing" })).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Storefront navigation" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: /Fresh styles just in/i })).toBeNull();
   });
 });

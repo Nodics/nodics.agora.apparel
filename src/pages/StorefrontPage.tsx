@@ -36,7 +36,7 @@ import { useLocalCart } from '../cart/cartState';
 import { maskedPaymentLabel, normalizeShippingOptions, paymentOption, paymentOptions, shippingOption, shippingOptions, shippingPrice, type ShippingOption } from '../checkout/checkoutOptions';
 import { paymentResultViewModel, type PaymentResultViewModel } from '../checkout/paymentResult';
 import { paymentProviderToken as checkoutPaymentProviderToken, validateCheckoutSnapshot } from '../checkout/checkoutValidation';
-import { agoraHomeContent, EMPTY_AGORA_HOME_CONTENT, type AgoraHeroSlide, type AgoraLinkAction } from '../cms/agoraHomeContent';
+import { agoraHomeContent, EMPTY_AGORA_HOME_CONTENT, type AgoraLinkAction } from '../cms/agoraHomeContent';
 import { resolveCmsPage } from '../cms/cmsClient';
 import type { CmsResolvedPageContract } from '../cms/cmsContract';
 import { productAvailabilityLabel } from '../commerce/availabilityPresentation';
@@ -57,68 +57,16 @@ type RouteState = {
   readonly checkoutStep?: CheckoutStep;
   readonly productSlug?: string;
 };
-type StorefrontNavItem = {
-  readonly label: string;
-  readonly collectionCode: string;
-  readonly dropdown?: boolean;
-};
-const storefrontProfile = (() => {
-  const siteCode = runtimeConfig.siteCode.toLowerCase();
-  if (siteCode.includes('electronics')) {
-    return {
-      domainClassName: 'hero-domain-electronics',
-      rootCollectionCode: 'agoraElectronicsComputing',
-      searchPlaceholder: 'Search phones, laptops, accessories...',
-      navItems: [
-        { label: 'Shop', collectionCode: 'agoraElectronicsComputing', dropdown: true },
-        { label: 'New in', collectionCode: 'agoraNewArrivals' },
-        { label: 'Computing', collectionCode: 'agoraElectronicsComputing', dropdown: true },
-        { label: 'Smartphones', collectionCode: 'agoraElectronicsSmartphones' },
-        { label: 'Accessories', collectionCode: 'agoraElectronicsAccessories' }
-      ] satisfies readonly StorefrontNavItem[]
-    };
-  }
-  if (siteCode.includes('telco')) {
-    return {
-      domainClassName: 'hero-domain-telco',
-      rootCollectionCode: 'agoraTelcoPostpaid',
-      searchPlaceholder: 'Search plans, devices, accessories...',
-      navItems: [
-        { label: 'Shop', collectionCode: 'agoraTelcoPostpaid', dropdown: true },
-        { label: 'New in', collectionCode: 'agoraNewArrivals' },
-        { label: 'Postpaid', collectionCode: 'agoraTelcoPostpaid', dropdown: true },
-        { label: 'Prepaid', collectionCode: 'agoraTelcoPrepaid' },
-        { label: 'Devices', collectionCode: 'agoraTelcoDevices' }
-      ] satisfies readonly StorefrontNavItem[]
-    };
-  }
-  return {
-    domainClassName: 'hero-domain-apparel',
-    rootCollectionCode: 'agoraWomen',
-    searchPlaceholder: 'Search dresses, bags, shirts...',
-    navItems: [
-      { label: 'Shop', collectionCode: 'agoraWomen', dropdown: true },
-      { label: 'New in', collectionCode: 'agoraNewArrivals' },
-      { label: 'Clothing', collectionCode: 'agoraWomenTops', dropdown: true },
-      { label: 'Bags & Accessories', collectionCode: 'agoraWomenAccessories' }
-    ] satisfies readonly StorefrontNavItem[]
-  };
-})();
 const orderCode = () => `storefront-order-${Date.now()}`;
 const idempotencyKey = () => `storefront-checkout-${Date.now()}`;
-const routeStateFromLocation = function (): RouteState {
-  if (typeof window === 'undefined') return { view: 'home', collectionCode: storefrontProfile.rootCollectionCode, query: '' };
+const routeStateFromLocation = function (rootCollectionCode = ''): RouteState {
+  if (typeof window === 'undefined') return { view: 'home', collectionCode: rootCollectionCode, query: '' };
   const path = window.location.pathname.replace(/\/+$/u, '') || '/';
-  if (path === '/cart') return { view: 'cart', collectionCode: storefrontProfile.rootCollectionCode, query: '' };
-  if (path === '/checkout') return { view: 'checkout', collectionCode: storefrontProfile.rootCollectionCode, query: '', checkoutStep: 'customer' };
-  if (path === '/orders') return { view: 'orders', collectionCode: storefrontProfile.rootCollectionCode, query: '' };
-  if (path === '/apparel' || path === '/clothing') return { view: 'plp', collectionCode: 'agoraWomen', query: '' };
-  if (path === '/electronics') return { view: 'plp', collectionCode: 'agoraElectronicsComputing', query: '' };
-  if (path === '/telco') return { view: 'plp', collectionCode: 'agoraTelcoPostpaid', query: '' };
-  if (path === '/new-in') return { view: 'plp', collectionCode: 'agoraNewArrivals', query: '' };
-  if (path === '/bags' || path === '/accessories') return { view: 'plp', collectionCode: 'agoraWomenAccessories', query: '' };
-  if (path.startsWith('/products/')) return { view: 'pdp', collectionCode: storefrontProfile.rootCollectionCode, query: '', productSlug: decodeURIComponent(path.slice('/products/'.length)) };
-  return { view: 'home', collectionCode: storefrontProfile.rootCollectionCode, query: '' };
+  if (path === '/cart') return { view: 'cart', collectionCode: rootCollectionCode, query: '' };
+  if (path === '/checkout') return { view: 'checkout', collectionCode: rootCollectionCode, query: '', checkoutStep: 'customer' };
+  if (path === '/orders') return { view: 'orders', collectionCode: rootCollectionCode, query: '' };
+  if (path.startsWith('/products/')) return { view: 'pdp', collectionCode: rootCollectionCode, query: '', productSlug: decodeURIComponent(path.slice('/products/'.length)) };
+  return { view: 'home', collectionCode: rootCollectionCode, query: '' };
 };
 const facetLabel = (value: unknown): string => {
   if (typeof value === 'string') return value;
@@ -204,12 +152,7 @@ function selectedHomeProducts(productCodes: readonly string[] | undefined, sourc
   const fallbackProducts = sourceProducts.filter((product) => !selectedCodes.has(product.productCode));
   return [...selectedProducts, ...fallbackProducts].slice(0, pageSize);
 }
-const emptyHeroSlide: AgoraHeroSlide = Object.freeze({
-  eyebrow: '',
-  title: 'Agora page content is not published yet.',
-});
-
-function NodicsBrand({ subtitle }: { readonly subtitle: string }) {
+function NodicsBrand({ logoText = 'NODICS', subtitle }: { readonly logoText?: string; readonly subtitle: string }) {
   return (
     <span className="agora-brand-lockup">
       <svg className="agora-brand-mark" aria-hidden="true" viewBox="0 0 64 64">
@@ -236,7 +179,7 @@ function NodicsBrand({ subtitle }: { readonly subtitle: string }) {
         </text>
       </svg>
       <span className="agora-brand-text">
-        <strong>NODICS</strong>
+        <strong>{logoText}</strong>
         <small>{subtitle}</small>
       </span>
     </span>
@@ -330,9 +273,11 @@ export function StorefrontPage() {
   const cart = useLocalCart();
   const collectionCarouselRef = useRef<HTMLElement>(null);
   const homeContent = useMemo(() => cmsPage ? agoraHomeContent(cmsPage, runtimeConfig) : EMPTY_AGORA_HOME_CONTENT, [cmsPage]);
+  const headerContent = homeContent.header;
+  const rootCollectionCode = headerContent.rootCollectionCode ?? homeContent.collections[0]?.code ?? '';
   const cmsHeroSlides = homeContent.heroSlides;
-  const activeHeroSlide = cmsHeroSlides[activeHeroIndex] ?? cmsHeroSlides[0] ?? emptyHeroSlide;
-  const nextHeroSlide = cmsHeroSlides[(activeHeroIndex + 1) % Math.max(cmsHeroSlides.length, 1)] ?? cmsHeroSlides[0] ?? emptyHeroSlide;
+  const activeHeroSlide = cmsHeroSlides[activeHeroIndex] ?? cmsHeroSlides[0];
+  const nextHeroSlide = cmsHeroSlides[(activeHeroIndex + 1) % Math.max(cmsHeroSlides.length, 1)] ?? cmsHeroSlides[0];
 
   useEffect(() => {
     const controller = new AbortController();
@@ -353,10 +298,15 @@ export function StorefrontPage() {
       })
       .catch(() => {
         if (controller.signal.aborted) return;
-        setCmsStatus('Published Agora experience is unavailable; showing local storefront fallback.');
+        setCmsStatus('Published Agora experience is not available yet.');
       });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (!rootCollectionCode || collectionCode) return;
+    setCollectionCode(rootCollectionCode);
+  }, [collectionCode, rootCollectionCode]);
 
   useEffect(() => {
     if (activeHeroIndex < cmsHeroSlides.length) return;
@@ -473,6 +423,7 @@ export function StorefrontPage() {
   };
 
   const openCollection = (code: string) => {
+    if (!code) return;
     setCollectionCode(code);
     setView('plp');
   };
@@ -911,7 +862,7 @@ export function StorefrontPage() {
 
   useEffect(() => {
     const applyRouteState = () => {
-      const nextRouteState = routeStateFromLocation();
+      const nextRouteState = routeStateFromLocation(rootCollectionCode);
       setView(nextRouteState.view);
       setCollectionCode(nextRouteState.collectionCode);
       setQuery(nextRouteState.query);
@@ -922,7 +873,7 @@ export function StorefrontPage() {
     };
     window.addEventListener('popstate', applyRouteState);
     return () => window.removeEventListener('popstate', applyRouteState);
-  }, [customerSession]);
+  }, [customerSession, rootCollectionCode]);
 
   const openAction = (action: AgoraLinkAction | undefined) => {
     if (!action) return;
@@ -930,11 +881,15 @@ export function StorefrontPage() {
       openCollection(action.collectionCode);
       return;
     }
+    if (action.path?.startsWith('http')) {
+      window.open(action.path, '_blank', 'noreferrer');
+      return;
+    }
     if (action.path === '/' || action.path === '#home') {
       setView('home');
       return;
     }
-    setView('plp');
+    if (action.path) window.history.pushState({}, '', action.path);
   };
 
   const lifecycleInput = () => ({
@@ -988,44 +943,95 @@ export function StorefrontPage() {
   const selectedColorOptions = productColorOptions(selected);
   const selectedSizeOptions = productSizeOptions(selected, selectedColourCode);
   const useCmsHeroImages = true;
+  const headerLogoText = headerContent.logoText ?? 'NODICS';
+  const headerSubtitle = headerContent.subtitle ?? 'AGORA';
+  const hasFooterContent = Boolean(
+    homeContent.footer.summary ||
+      homeContent.footer.contactEmail ||
+      homeContent.footer.groups.length ||
+      homeContent.footer.newsletter ||
+      homeContent.footer.legalLinks.length ||
+      homeContent.footer.copyright ||
+      homeContent.footer.brandLabel,
+  );
+  const renderHeaderAction = (action: AgoraLinkAction, className?: string) => {
+    if (action.collectionCode) {
+      return (
+        <button className={className} key={`${action.label}-${action.collectionCode}`} onClick={() => openCollection(action.collectionCode ?? '')} type="button">
+          {action.label}
+        </button>
+      );
+    }
+    return (
+      <a className={className} href={action.path} key={`${action.label}-${action.path}`}>
+        {action.label}
+      </a>
+    );
+  };
+
+  if (!cmsPage) {
+    const loading = cmsStatus?.toLowerCase().includes('loading');
+    return (
+      <main className="agora-shell agora-unpublished-shell">
+        <section className="storefront-unpublished-state" aria-live="polite" role={loading ? 'status' : 'alert'}>
+          <NodicsBrand logoText="NODICS" subtitle="AGORA" />
+          <p className="eyebrow">{loading ? 'Preparing your experience' : 'Storefront maintenance'}</p>
+          <h1>{loading ? 'Opening the storefront.' : 'We are getting the storefront ready.'}</h1>
+          <p>
+            {loading
+              ? 'Thanks for your patience while the latest shopping experience is being prepared.'
+              : 'The store is not available right now while we complete a content update. Please check back shortly.'}
+          </p>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="agora-shell">
       <aside className="storefront-utility-bar" aria-label="Storefront service links">
         <div className="utility-links">
-          <a href="tel:+13156666688">+1 315-666-6688</a>
-          <a href="mailto:support@nodics.com">support@nodics.com</a>
-          <button onClick={() => openCollection(storefrontProfile.rootCollectionCode)} type="button">Our Store</button>
+          {headerContent.utilityLinks.map((item) => renderHeaderAction(item))}
         </div>
-        <div className="utility-preferences" aria-label="Storefront preferences">
-          <button type="button"><span aria-hidden="true">🇺🇸</span> USD <ChevronDown aria-hidden="true" size={16} /></button>
-          <button type="button">English <ChevronDown aria-hidden="true" size={16} /></button>
-        </div>
+        {headerContent.preferences.length ? (
+          <div className="utility-preferences" aria-label="Storefront preferences">
+            {headerContent.preferences.map((item) => (
+              <button key={item.label} onClick={() => openAction(item)} type="button">
+                {item.label} <ChevronDown aria-hidden="true" size={16} />
+              </button>
+            ))}
+          </div>
+        ) : null}
       </aside>
       <header className={`storefront-header${headerScrolled ? ' is-scrolled' : ''}`}>
         <button className="agora-brand" onClick={() => setView('home')} type="button" aria-label="Nodics Agora home">
-          <NodicsBrand subtitle="AGORA" />
+          <NodicsBrand logoText={headerLogoText} subtitle={headerSubtitle} />
         </button>
         <nav className="nav-pills" aria-label="Storefront navigation">
-          <button className={view === 'home' ? '' : 'secondary'} onClick={() => setView('home')} type="button">Home</button>
-          {storefrontProfile.navItems.map((item) => (
-            <button className={collectionCode === item.collectionCode ? '' : 'secondary'} key={item.label} onClick={() => openCollection(item.collectionCode)} type="button">
+          {headerContent.navigation.map((item) => (
+            <button className={collectionCode === item.collectionCode ? '' : 'secondary'} key={item.label} onClick={() => item.collectionCode ? openCollection(item.collectionCode) : openAction(item)} type="button">
               {item.label} {item.dropdown ? <ChevronDown aria-hidden="true" size={15} /> : null}
             </button>
           ))}
         </nav>
         <div className="commerce-actions">
-          <button className="icon-action" onClick={() => setView('plp')} type="button" aria-label="Search products"><Search aria-hidden="true" size={24} /></button>
-          <button className="icon-action" onClick={() => setAccountPanelOpen((current) => !current)} type="button" aria-label={customerSession.accessToken ? customerSession.email : 'Account'}>
-            <UserRound aria-hidden="true" size={24} />
-          </button>
-          <button className="icon-action" onClick={() => setView('plp')} type="button" aria-label={`Wishlist with ${wishlistProductCodes.length} items`}>
-            <Heart aria-hidden="true" size={25} />
-          </button>
-          <button className="icon-action cart-icon-action" onClick={() => setView('cart')} type="button" aria-label={`Cart (${cart.quantity})`}>
-            <ShoppingBag aria-hidden="true" size={25} />
-            {cart.quantity ? <span>{cart.quantity}</span> : null}
-          </button>
+          {headerContent.searchEnabled ? <button className="icon-action" onClick={() => setView('plp')} type="button" aria-label="Search products"><Search aria-hidden="true" size={24} /></button> : null}
+          {headerContent.accountPreviewEnabled ? (
+            <button className="icon-action" onClick={() => setAccountPanelOpen((current) => !current)} type="button" aria-label={customerSession.accessToken ? customerSession.email : 'Account'}>
+              <UserRound aria-hidden="true" size={24} />
+            </button>
+          ) : null}
+          {headerContent.wishlistPreviewEnabled ? (
+            <button className="icon-action" onClick={() => setView('plp')} type="button" aria-label={`Wishlist with ${wishlistProductCodes.length} items`}>
+              <Heart aria-hidden="true" size={25} />
+            </button>
+          ) : null}
+          {headerContent.cartPreviewEnabled ? (
+            <button className="icon-action cart-icon-action" onClick={() => setView('cart')} type="button" aria-label={`Cart (${cart.quantity})`}>
+              <ShoppingBag aria-hidden="true" size={25} />
+              {cart.quantity ? <span>{cart.quantity}</span> : null}
+            </button>
+          ) : null}
         </div>
       </header>
       {accountPanelOpen ? (
@@ -1062,7 +1068,8 @@ export function StorefrontPage() {
       ) : null}
       {view === 'home' ? (
         <>
-          <header className={`hero hero-fashion ${storefrontProfile.domainClassName}${useCmsHeroImages ? '' : ' hero-domain'}`}>
+          {cmsHeroSlides.length ? (
+          <header className={`hero hero-fashion${useCmsHeroImages ? '' : ' hero-domain'}`}>
             <div className="hero-banner-slider" aria-label="Featured Agora banner slides">
               {cmsHeroSlides.map((slide, index) => (
                 <div
@@ -1075,8 +1082,8 @@ export function StorefrontPage() {
               ))}
             </div>
             <section className="hero-copy-card">
-              <p>{activeHeroSlide.eyebrow}</p>
-              <h1>{activeHeroSlide.title}</h1>
+              <p>{activeHeroSlide?.eyebrow}</p>
+              <h1>{activeHeroSlide?.title}</h1>
               <form
                 className="hero-search"
                 onSubmit={(event) => {
@@ -1087,14 +1094,14 @@ export function StorefrontPage() {
                 <input
                   aria-label="Search products"
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder={storefrontProfile.searchPlaceholder}
+                  placeholder={headerContent.searchPlaceholder ?? 'Search products'}
                   value={query}
                 />
                 <button type="submit">Search</button>
               </form>
               <div className="hero-actions">
-                {activeHeroSlide.primaryAction ? <button onClick={() => openAction(activeHeroSlide.primaryAction)} type="button">{activeHeroSlide.primaryAction.label}</button> : null}
-                {nextHeroSlide.secondaryAction ?? nextHeroSlide.primaryAction ? <button className="secondary" onClick={() => openAction(nextHeroSlide.secondaryAction ?? nextHeroSlide.primaryAction)} type="button">{(nextHeroSlide.secondaryAction ?? nextHeroSlide.primaryAction)?.label}</button> : null}
+                {activeHeroSlide?.primaryAction ? <button onClick={() => openAction(activeHeroSlide.primaryAction)} type="button">{activeHeroSlide.primaryAction.label}</button> : null}
+                {nextHeroSlide?.secondaryAction ?? nextHeroSlide?.primaryAction ? <button className="secondary" onClick={() => openAction(nextHeroSlide?.secondaryAction ?? nextHeroSlide?.primaryAction)} type="button">{(nextHeroSlide?.secondaryAction ?? nextHeroSlide?.primaryAction)?.label}</button> : null}
               </div>
             </section>
             <nav className="hero-slide-nav" aria-label="Featured Agora edits">
@@ -1113,6 +1120,7 @@ export function StorefrontPage() {
               ))}
             </nav>
           </header>
+          ) : null}
           {homeContent.serviceMessages.length ? (
             <section className="service-marquee" aria-label="Storefront service promise">
               <div className="service-marquee-track">
@@ -1579,34 +1587,38 @@ export function StorefrontPage() {
         </section>
       ) : view === 'home' ? (
         <>
-          <section className="section-header collection-section-header">
-            <div>
-              {homeContent.collectionHeader?.eyebrow ? <p className="eyebrow">{homeContent.collectionHeader.eyebrow}</p> : null}
-              {homeContent.collectionHeader?.heading ? <h2>{homeContent.collectionHeader.heading}</h2> : null}
-            </div>
-            {homeContent.collectionHeader?.actionLabel ? <button className="collection-view-all" onClick={() => setView('plp')} type="button">{homeContent.collectionHeader.actionLabel}</button> : null}
-          </section>
-          <div className="collection-carousel-shell">
-            <button className="collection-carousel-control collection-carousel-control-previous" onClick={() => scrollCollectionCarousel('previous')} type="button" aria-label="Previous collections">
-              <ChevronLeft aria-hidden="true" size={28} />
-            </button>
-            <div className="collection-carousel-viewport">
-              <section className="collection-grid collection-grid-photo" ref={collectionCarouselRef} aria-label="Shop by collection">
-                {homeContent.collections.map((collection) => (
-                  <button key={collection.label} onClick={() => openCollection(collection.code)} type="button">
-                    <div className="collection-card-media">
-                      {collection.image ? <img alt={collection.alt ?? ''} src={collection.image} /> : null}
-                    </div>
-                    <span className="collection-card-label">{collection.label}</span>
-                    <small className="collection-card-summary">{collection.summary}</small>
-                  </button>
-                ))}
+          {homeContent.collections.length ? (
+            <>
+              <section className="section-header collection-section-header">
+                <div>
+                  {homeContent.collectionHeader?.eyebrow ? <p className="eyebrow">{homeContent.collectionHeader.eyebrow}</p> : null}
+                  {homeContent.collectionHeader?.heading ? <h2>{homeContent.collectionHeader.heading}</h2> : null}
+                </div>
+                {homeContent.collectionHeader?.actionLabel ? <button className="collection-view-all" onClick={() => setView('plp')} type="button">{homeContent.collectionHeader.actionLabel}</button> : null}
               </section>
-            </div>
-            <button className="collection-carousel-control collection-carousel-control-next" onClick={() => scrollCollectionCarousel('next')} type="button" aria-label="Next collections">
-              <ChevronRight aria-hidden="true" size={28} />
-            </button>
-          </div>
+              <div className="collection-carousel-shell">
+                <button className="collection-carousel-control collection-carousel-control-previous" onClick={() => scrollCollectionCarousel('previous')} type="button" aria-label="Previous collections">
+                  <ChevronLeft aria-hidden="true" size={28} />
+                </button>
+                <div className="collection-carousel-viewport">
+                  <section className="collection-grid collection-grid-photo" ref={collectionCarouselRef} aria-label="Shop by collection">
+                    {homeContent.collections.map((collection) => (
+                      <button key={collection.label} onClick={() => openCollection(collection.code)} type="button">
+                        <div className="collection-card-media">
+                          {collection.image ? <img alt={collection.alt ?? ''} src={collection.image} /> : null}
+                        </div>
+                        <span className="collection-card-label">{collection.label}</span>
+                        <small className="collection-card-summary">{collection.summary}</small>
+                      </button>
+                    ))}
+                  </section>
+                </div>
+                <button className="collection-carousel-control collection-carousel-control-next" onClick={() => scrollCollectionCarousel('next')} type="button" aria-label="Next collections">
+                  <ChevronRight aria-hidden="true" size={28} />
+                </button>
+              </div>
+            </>
+          ) : null}
           {homeContent.specialOffer ? (
             <section className="special-offer-split" aria-label={homeContent.specialOffer.heading}>
               <article className="special-offer-media special-offer-media-left">
@@ -1628,23 +1640,27 @@ export function StorefrontPage() {
               </article>
             </section>
           ) : null}
-          <section className="section-header">
-            <div>
-              <p className="eyebrow">{homeContent.topPicks.eyebrow}</p>
-              <h2>{homeContent.topPicks.heading}</h2>
-            </div>
-          </section>
-          <ProductCarousel
-            ariaLabel="Featured products"
-            compareProductCodes={compareProductCodes}
-            onAdd={addToCart}
-            onCompare={toggleCompare}
-            onOpen={openProduct}
-            onQuickView={openQuickView}
-            onWishlist={toggleWishlist}
-            products={featuredProducts}
-            wishlistProductCodes={wishlistProductCodes}
-          />
+          {homeContent.topPicks.heading ? (
+            <>
+              <section className="section-header">
+                <div>
+                  {homeContent.topPicks.eyebrow ? <p className="eyebrow">{homeContent.topPicks.eyebrow}</p> : null}
+                  <h2>{homeContent.topPicks.heading}</h2>
+                </div>
+              </section>
+              <ProductCarousel
+                ariaLabel="Featured products"
+                compareProductCodes={compareProductCodes}
+                onAdd={addToCart}
+                onCompare={toggleCompare}
+                onOpen={openProduct}
+                onQuickView={openQuickView}
+                onWishlist={toggleWishlist}
+                products={featuredProducts}
+                wishlistProductCodes={wishlistProductCodes}
+              />
+            </>
+          ) : null}
           <section className="promo-grid">
             {homeContent.promotions.map((promotion) => (
               <article className={`image-promo image-promo-${promotion.variant}`} key={promotion.title}>
@@ -1668,24 +1684,28 @@ export function StorefrontPage() {
               </article>
             ))}
           </section>
-          <section className="section-header">
-            <div>
-              <p className="eyebrow">{homeContent.bestSelling.eyebrow}</p>
-              <h2>{homeContent.bestSelling.heading}</h2>
-            </div>
-          </section>
-          <ProductCarousel
-            ariaLabel="Best selling products"
-            compareProductCodes={compareProductCodes}
-            direction="backward"
-            onAdd={addToCart}
-            onCompare={toggleCompare}
-            onOpen={openProduct}
-            onQuickView={openQuickView}
-            onWishlist={toggleWishlist}
-            products={bestSelling}
-            wishlistProductCodes={wishlistProductCodes}
-          />
+          {homeContent.bestSelling.heading ? (
+            <>
+              <section className="section-header">
+                <div>
+                  {homeContent.bestSelling.eyebrow ? <p className="eyebrow">{homeContent.bestSelling.eyebrow}</p> : null}
+                  <h2>{homeContent.bestSelling.heading}</h2>
+                </div>
+              </section>
+              <ProductCarousel
+                ariaLabel="Best selling products"
+                compareProductCodes={compareProductCodes}
+                direction="backward"
+                onAdd={addToCart}
+                onCompare={toggleCompare}
+                onOpen={openProduct}
+                onQuickView={openQuickView}
+                onWishlist={toggleWishlist}
+                products={bestSelling}
+                wishlistProductCodes={wishlistProductCodes}
+              />
+            </>
+          ) : null}
           <section className="service-grid">
             {homeContent.serviceBadges.map((item) => {
               const ServiceIcon = serviceBadgeIcon(item.label);
@@ -1700,45 +1720,53 @@ export function StorefrontPage() {
               );
             })}
           </section>
-          <section className="section-header">
-            <div>
-              <p className="eyebrow">{homeContent.testimonialHeader?.eyebrow}</p>
-              <h2>{homeContent.testimonialHeader?.heading}</h2>
-              <p className="muted">{homeContent.testimonialHeader?.summary}</p>
-            </div>
-          </section>
-          <section className="testimonial-grid" aria-label="Customer testimonials">
-            {homeContent.testimonials.map((quote) => (
-              <article key={quote.name}>
-                {quote.image ? <img alt={quote.alt ?? ''} className="testimonial-image" src={quote.image} /> : null}
-                <blockquote>{quote.quote}</blockquote>
-                <footer>
-                  {quote.avatar ? <img alt="" src={quote.avatar} /> : null}
-                  <span>
-                    <strong>{quote.name}</strong>
-                    <small>{quote.product}</small>
-                  </span>
-                </footer>
-              </article>
-            ))}
-          </section>
-          <section className="section-header">
-            <div>
-              <p className="eyebrow">{homeContent.galleryHeader?.eyebrow}</p>
-              <h2>{homeContent.galleryHeader?.heading}</h2>
-            </div>
-          </section>
-          <section className="instagram-grid" aria-label="Agora social gallery">
-            {homeContent.gallery.map((item) => (
-              <button key={item.mediaCode ?? item.image} onClick={() => openCollection(collections[0]?.code ?? collectionCode)} type="button">
-                {item.image ? <img alt={item.alt ?? ''} src={item.image} /> : null}
-                <span>View Product</span>
-              </button>
-            ))}
-          </section>
-          <footer className="storefront-footer">
+          {homeContent.testimonials.length ? (
+            <>
+              <section className="section-header">
+                <div>
+                  {homeContent.testimonialHeader?.eyebrow ? <p className="eyebrow">{homeContent.testimonialHeader.eyebrow}</p> : null}
+                  {homeContent.testimonialHeader?.heading ? <h2>{homeContent.testimonialHeader.heading}</h2> : null}
+                  {homeContent.testimonialHeader?.summary ? <p className="muted">{homeContent.testimonialHeader.summary}</p> : null}
+                </div>
+              </section>
+              <section className="testimonial-grid" aria-label="Customer testimonials">
+                {homeContent.testimonials.map((quote) => (
+                  <article key={quote.name}>
+                    {quote.image ? <img alt={quote.alt ?? ''} className="testimonial-image" src={quote.image} /> : null}
+                    <blockquote>{quote.quote}</blockquote>
+                    <footer>
+                      {quote.avatar ? <img alt="" src={quote.avatar} /> : null}
+                      <span>
+                        <strong>{quote.name}</strong>
+                        <small>{quote.product}</small>
+                      </span>
+                    </footer>
+                  </article>
+                ))}
+              </section>
+            </>
+          ) : null}
+          {homeContent.gallery.length ? (
+            <>
+              <section className="section-header">
+                <div>
+                  {homeContent.galleryHeader?.eyebrow ? <p className="eyebrow">{homeContent.galleryHeader.eyebrow}</p> : null}
+                  {homeContent.galleryHeader?.heading ? <h2>{homeContent.galleryHeader.heading}</h2> : null}
+                </div>
+              </section>
+              <section className="instagram-grid" aria-label="Agora social gallery">
+                {homeContent.gallery.map((item) => (
+                  <button key={item.mediaCode ?? item.image} onClick={() => openCollection(collections[0]?.code ?? collectionCode)} type="button">
+                    {item.image ? <img alt={item.alt ?? ''} src={item.image} /> : null}
+                    <span>View Product</span>
+                  </button>
+                ))}
+              </section>
+            </>
+          ) : null}
+          {hasFooterContent ? <footer className="storefront-footer">
             <section className="storefront-footer-brand">
-              <NodicsBrand subtitle="AGORA" />
+              <NodicsBrand logoText={headerLogoText} subtitle={headerSubtitle} />
               {homeContent.footer.summary ? <p>{homeContent.footer.summary}</p> : null}
               {homeContent.footer.contactEmail ? <a href={`mailto:${homeContent.footer.contactEmail}`}>{homeContent.footer.contactEmail}</a> : null}
             </section>
@@ -1748,20 +1776,20 @@ export function StorefrontPage() {
                 {group.links.map((link) => <span className="footer-link" key={link}>{link}</span>)}
               </section>
             ))}
-            <section className="storefront-footer-newsletter">
-              <h3>{homeContent.footer.newsletter?.title}</h3>
-              <p>{homeContent.footer.newsletter?.text}</p>
+            {homeContent.footer.newsletter ? <section className="storefront-footer-newsletter">
+              {homeContent.footer.newsletter.title ? <h3>{homeContent.footer.newsletter.title}</h3> : null}
+              {homeContent.footer.newsletter.text ? <p>{homeContent.footer.newsletter.text}</p> : null}
               <form onSubmit={(event) => event.preventDefault()}>
                 <input aria-label="Newsletter email" placeholder={homeContent.footer.newsletter?.placeholder} />
                 <button type="submit">{homeContent.footer.newsletter?.buttonLabel}</button>
               </form>
-            </section>
+            </section> : null}
             <section className="storefront-footer-legal">
-              <span>© 2026 Nodics. All rights reserved.</span>
-              <span>Nodics Agora</span>
+              {homeContent.footer.copyright ? <span>{homeContent.footer.copyright}</span> : null}
+              {homeContent.footer.brandLabel ? <span>{homeContent.footer.brandLabel}</span> : null}
               {homeContent.footer.legalLinks.map((link) => <span key={link}>{link}</span>)}
             </section>
-          </footer>
+          </footer> : null}
         </>
       ) : (
         <>
@@ -1823,7 +1851,7 @@ export function StorefrontPage() {
                 The page is available, but the current Commerce discovery contract did not return sellable products for this
                 collection and search context. Try another collection or publish matching products to the active Agora store.
               </p>
-              <button onClick={() => openCollection('agoraWomen')} type="button">Browse available products</button>
+              <button onClick={() => openCollection(rootCollectionCode)} type="button">Browse available products</button>
             </section>
           ) : (
             <div className="load-more">

@@ -7,6 +7,24 @@ export interface AgoraLinkAction {
   readonly path?: string;
 }
 
+export interface AgoraHeaderNavigationItem extends AgoraLinkAction {
+  readonly dropdown?: boolean;
+}
+
+export interface AgoraHeaderContent {
+  readonly logoText?: string;
+  readonly subtitle?: string;
+  readonly rootCollectionCode?: string;
+  readonly searchPlaceholder?: string;
+  readonly searchEnabled: boolean;
+  readonly cartPreviewEnabled: boolean;
+  readonly accountPreviewEnabled: boolean;
+  readonly wishlistPreviewEnabled: boolean;
+  readonly utilityLinks: readonly AgoraLinkAction[];
+  readonly preferences: readonly AgoraLinkAction[];
+  readonly navigation: readonly AgoraHeaderNavigationItem[];
+}
+
 export interface AgoraMediaItem {
   readonly image?: string;
   readonly mediaCode?: string;
@@ -71,10 +89,13 @@ export interface AgoraFooterContent {
     readonly placeholder?: string;
     readonly buttonLabel?: string;
   };
+  readonly copyright?: string;
+  readonly brandLabel?: string;
   readonly legalLinks: readonly string[];
 }
 
 export interface AgoraHomeContent {
+  readonly header: AgoraHeaderContent;
   readonly heroSlides: readonly AgoraHeroSlide[];
   readonly serviceMessages: readonly AgoraServiceMessage[];
   readonly collectionHeader?: { readonly eyebrow?: string; readonly heading?: string; readonly actionLabel?: string };
@@ -91,12 +112,23 @@ export interface AgoraHomeContent {
   readonly footer: AgoraFooterContent;
 }
 
+const EMPTY_HEADER: AgoraHeaderContent = Object.freeze({
+  searchEnabled: false,
+  cartPreviewEnabled: false,
+  accountPreviewEnabled: false,
+  wishlistPreviewEnabled: false,
+  utilityLinks: Object.freeze([]),
+  preferences: Object.freeze([]),
+  navigation: Object.freeze([]),
+});
+
 const EMPTY_FOOTER: AgoraFooterContent = Object.freeze({
   groups: Object.freeze([]),
   legalLinks: Object.freeze([]),
 });
 
 export const EMPTY_AGORA_HOME_CONTENT: AgoraHomeContent = Object.freeze({
+  header: EMPTY_HEADER,
   heroSlides: Object.freeze([]),
   serviceMessages: Object.freeze([]),
   collections: Object.freeze([]),
@@ -153,6 +185,21 @@ function action(value: unknown): AgoraLinkAction | undefined {
   });
 }
 
+function headerNavigationItem(value: unknown): AgoraHeaderNavigationItem | undefined {
+  const item = action(value);
+  if (!item || (!item.collectionCode && !item.path)) return undefined;
+  return Object.freeze({
+    ...item,
+    ...(isRecord(value) && typeof value.dropdown === 'boolean' ? { dropdown: value.dropdown } : {}),
+  });
+}
+
+function headerAction(value: unknown): AgoraLinkAction | undefined {
+  const item = action(value);
+  if (!item || (!item.collectionCode && !item.path)) return undefined;
+  return item;
+}
+
 function component(page: CmsResolvedPageContract | undefined, renderer: string, code?: string): CmsComponentContract | undefined {
   return page?.page.components.find((item) => item.active && item.renderer === renderer && (!code || item.code === code || item.code.endsWith(code)));
 }
@@ -186,6 +233,7 @@ function serviceMessages(value: unknown): readonly AgoraServiceMessage[] {
 }
 
 export function agoraHomeContent(page: CmsResolvedPageContract | undefined, config: AgoraRuntimeConfig): AgoraHomeContent {
+  const header = component(page, 'agora.header');
   const hero = component(page, 'agora.heroCarousel');
   const ticker = component(page, 'agora.serviceTicker');
   const collections = component(page, 'agora.collectionGrid');
@@ -199,6 +247,19 @@ export function agoraHomeContent(page: CmsResolvedPageContract | undefined, conf
   const footer = component(page, 'agora.footer');
 
   return Object.freeze({
+    header: Object.freeze({
+      ...(string(header?.properties.logoText) ? { logoText: string(header?.properties.logoText) } : {}),
+      ...(string(header?.properties.subtitle) ? { subtitle: string(header?.properties.subtitle) } : {}),
+      ...(string(header?.properties.rootCollectionCode) ? { rootCollectionCode: string(header?.properties.rootCollectionCode) } : {}),
+      ...(string(header?.properties.searchPlaceholder) ? { searchPlaceholder: string(header?.properties.searchPlaceholder) } : {}),
+      searchEnabled: Boolean(header) && header?.properties.searchEnabled !== false,
+      cartPreviewEnabled: Boolean(header) && header?.properties.cartPreviewEnabled !== false,
+      accountPreviewEnabled: Boolean(header) && header?.properties.accountPreviewEnabled !== false,
+      wishlistPreviewEnabled: Boolean(header) && header?.properties.wishlistPreviewEnabled === true,
+      utilityLinks: Object.freeze(records(header?.properties.utilityLinks).map(headerAction).filter((item): item is AgoraLinkAction => Boolean(item))),
+      preferences: Object.freeze(records(header?.properties.preferences).map(headerAction).filter((item): item is AgoraLinkAction => Boolean(item))),
+      navigation: Object.freeze(records(header?.properties.navigationItems).map(headerNavigationItem).filter((item): item is AgoraHeaderNavigationItem => Boolean(item))),
+    }),
     heroSlides: Object.freeze(records(hero?.properties.slides).map((item) => Object.freeze({
       ...mediaItem(config, hero, item),
       eyebrow: string(item.eyebrow) ?? '',
@@ -282,6 +343,8 @@ export function agoraHomeContent(page: CmsResolvedPageContract | undefined, conf
         ...(string(footer?.properties.newsletter.placeholder) ? { placeholder: string(footer?.properties.newsletter.placeholder) } : {}),
         ...(string(footer?.properties.newsletter.buttonLabel) ? { buttonLabel: string(footer?.properties.newsletter.buttonLabel) } : {}),
       }) : undefined,
+      ...(string(footer?.properties.copyright) ? { copyright: string(footer?.properties.copyright) } : {}),
+      ...(string(footer?.properties.brandLabel) ? { brandLabel: string(footer?.properties.brandLabel) } : {}),
       legalLinks: Object.freeze(Array.isArray(footer?.properties.legalLinks) ? footer.properties.legalLinks.filter((link): link is string => typeof link === 'string' && Boolean(link.trim())) : []),
     }),
   });
