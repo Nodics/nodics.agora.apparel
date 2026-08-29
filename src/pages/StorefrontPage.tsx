@@ -349,7 +349,7 @@ export function StorefrontPage() {
 
   useEffect(() => {
     let active = true;
-    void listProducts(runtimeConfig, { pageSize: '32' })
+    void listProducts(runtimeConfig, { categoryCode: rootCollectionCode || undefined, pageSize: '32' })
       .then((response) => {
         if (active) setHomeProducts(response.products);
       })
@@ -359,7 +359,7 @@ export function StorefrontPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [rootCollectionCode]);
 
   useEffect(() => {
     if (!pendingProductSlug || selected?.slug === pendingProductSlug) return;
