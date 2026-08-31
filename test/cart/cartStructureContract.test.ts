@@ -14,6 +14,7 @@ const config: AgoraRuntimeConfig = {
   siteCode: 'agora',
   channel: 'web',
   storeCode: 'agoraMainStore',
+  domainCode: 'apparel',
   locale: 'en',
   requestTimeoutMs: 1000,
 };

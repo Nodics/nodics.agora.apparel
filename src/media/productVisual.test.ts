@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { productGalleryUrls, productImageUrl, productVisualUrl } from './productVisual';
+import { productGalleryUrls, productHoverImageUrl, productImageUrl, productVisualUrl } from './productVisual';
 import type { ProductCard } from '../api/commerceClient';
 
 describe('product media projection', () => {
@@ -29,6 +29,29 @@ describe('product media projection', () => {
 
   it('can resolve a declared media code when a backend descriptor has not expanded it yet', () => {
     expect(productVisualUrl('agora-owned-product-satin-midi-dress-primary', 'http://localhost:4314')).toBe('http://localhost:4314/nodics/media/v0/content/agora-owned-product-satin-midi-dress-primary');
+  });
+
+  it('uses business-managed secondary media for product hover imagery', () => {
+    const product: ProductCard = {
+      productCode: 'agoraLinenWrapDress',
+      name: 'Linen Wrap Dress',
+      media: {
+        primary: { mediaCode: 'agora-owned-product-linen-wrap-dress-primary' },
+        secondary: { mediaCode: 'agora-owned-product-linen-wrap-dress-back' },
+        gallery: [
+          { mediaCode: 'agora-owned-product-linen-wrap-dress-primary' },
+          { mediaCode: 'agora-owned-product-linen-wrap-dress-detail' }
+        ]
+      }
+    };
+
+    expect(
+      productHoverImageUrl(
+        product,
+        'http://localhost:4314/nodics/media/v0/content/agora-owned-product-linen-wrap-dress-primary',
+        'http://localhost:4314',
+      ),
+    ).toBe('http://localhost:4314/nodics/media/v0/content/agora-owned-product-linen-wrap-dress-back');
   });
 
   it('does not render product media when the Product media contract is absent', () => {

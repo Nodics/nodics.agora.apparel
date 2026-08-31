@@ -32,6 +32,7 @@ const config: AgoraRuntimeConfig = {
   siteCode: 'agora',
   channel: 'web',
   storeCode: 'agoraMainStore',
+  domainCode: 'apparel',
   locale: 'en',
   requestTimeoutMs: 1000,
 };
@@ -70,8 +71,10 @@ describe('commerceClient', () => {
       storeCode: config.storeCode,
       locale: config.locale,
       categoryCode: 'agoraWomen',
+      domainCode: 'apparel',
       q: 'linen',
-      pageSize: '12',
+      page: '2',
+      pageSize: '10',
     });
 
     expect(target.origin).toBe('http://localhost:4350');
@@ -79,18 +82,22 @@ describe('commerceClient', () => {
     expect(target.searchParams.get('storeCode')).toBe('agoraMainStore');
     expect(target.searchParams.get('locale')).toBe('en');
     expect(target.searchParams.get('categoryCode')).toBe('agoraWomen');
+    expect(target.searchParams.get('domainCode')).toBe('apparel');
     expect(target.searchParams.get('q')).toBe('linen');
+    expect(target.searchParams.get('page')).toBe('2');
   });
 
   it('lists products through the Commerce Online customer discovery route', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ data: { products: [{ productCode: 'agoraLinenWrapDress' }] } }));
 
-    const response = await listProducts(config, { categoryCode: 'agoraWomen', pageSize: '4' });
+    const response = await listProducts(config, { categoryCode: 'agoraWomen', page: '3', pageSize: '4' });
     const request = lastRequest();
 
     expect(response.products[0]?.productCode).toBe('agoraLinenWrapDress');
     expect(request.target).toContain('http://localhost:4350/nodics/product/v0/customer/products/discovery');
     expect(request.target).toContain('storeCode=agoraMainStore');
+    expect(request.target).toContain('page=3');
+    expect(request.target).toContain('pageSize=4');
     expect(request.options.headers).toMatchObject({
       'x-enterprise-code': 'default',
       'x-tenant-code': 'default',

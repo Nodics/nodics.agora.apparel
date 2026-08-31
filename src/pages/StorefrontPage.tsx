@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowUpRight, BadgePercent, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Headphones, Heart, RotateCcw, Search, ShieldCheck, ShoppingBag, Truck, UserRound, type LucideIcon } from 'lucide-react';
 
 import {
@@ -32,41 +33,96 @@ import {
 } from '../api/commerceClient';
 import { getReviewAggregate, listPublishedReviews, type PublicReview, type ReviewAggregate } from '../api/engagementClient';
 import { authenticateCustomer, customerAccessToken } from '../api/profileClient';
+import {
+  apparelColorOptions as productColorOptions,
+  apparelImageUrlForVariant,
+  apparelSelectionForVariant,
+  apparelSizeOptions as productSizeOptions,
+  apparelVariantForSelection as productVariantForSelection,
+} from '../accelerators/apparel/apparelOptions';
 import { useLocalCart } from '../cart/cartState';
 import { maskedPaymentLabel, normalizeShippingOptions, paymentOption, paymentOptions, shippingOption, shippingOptions, shippingPrice, type ShippingOption } from '../checkout/checkoutOptions';
 import { paymentResultViewModel, type PaymentResultViewModel } from '../checkout/paymentResult';
 import { paymentProviderToken as checkoutPaymentProviderToken, validateCheckoutSnapshot } from '../checkout/checkoutValidation';
-import { agoraHomeContent, EMPTY_AGORA_HOME_CONTENT, type AgoraLinkAction } from '../cms/agoraHomeContent';
+import { agoraHomeContent, EMPTY_AGORA_HOME_CONTENT, type AgoraCollectionTile, type AgoraLinkAction, type AgoraMediaItem, type AgoraMegaMenu } from '../cms/agoraHomeContent';
 import { resolveCmsPage } from '../cms/cmsClient';
 import type { CmsResolvedPageContract } from '../cms/cmsContract';
 import { productAvailabilityLabel } from '../commerce/availabilityPresentation';
 import { productBrandLabel } from '../commerce/productPresentation';
 import { ProductCarousel } from '../components/ProductCarousel';
 import { ProductCardView } from '../components/ProductCardView';
+import { ProductFilterDrawer, ProductListingToolbar, type ProductFilterKey, type ProductFilterOptionGroup, type ProductFilterState, type ProductListingLayout } from '../components/ProductListingControls';
 import { clearAgoraCustomerSession, resolveAgoraCustomerSession, saveAgoraCustomerSession, type CustomerSession } from '../customer/customerSession';
-import { ProductMediaPlaceholder, productGalleryImageUrl, productGalleryUrls, productImageUrl } from '../media/productVisual';
+import { ProductMediaPlaceholder, mediaDeliveryUrl, productGalleryImageUrl, productGalleryUrls, productImageUrl } from '../media/productVisual';
 import { lifecycleAutomationPlan, lifecycleFormGuidance, lifecycleReasonOptions, lifecycleSummary, lifecycleTimeline, lifecycleTrackingSummary, lifecycleTypes, preferredResolutionOptions, previewLifecycleRequest, refundMethodOptions, submitLifecycleRequest } from '../order/orderLifecycle';
 import { runtimeConfig } from '../runtime/config';
 
-type View = 'home' | 'plp' | 'pdp' | 'cart' | 'checkout' | 'payment-result' | 'confirmation' | 'orders';
+type View = 'home' | 'collections' | 'plp' | 'pdp' | 'cart' | 'checkout' | 'payment-result' | 'confirmation' | 'orders';
 type CheckoutStep = 'customer' | 'shipping' | 'payment' | 'review';
+type ProductSearchContext = 'all' | 'brand' | 'category' | 'collection';
+const PRODUCT_LISTING_BATCH_SIZE = 10;
+const PRODUCT_LISTING_DEFAULT_HERO_MEDIA_CODE = 'agora-owned-product-listing-wide-hero';
+const PRODUCT_LISTING_DEFAULT_HERO_FALLBACK_SRC = '/media/agora-owned-product-listing-wide-hero.jpg';
+const isProductListingLayout = function (value: string | undefined): value is ProductListingLayout {
+  return value === 'list' || value === 'grid-2' || value === 'grid-3' || value === 'grid-4' || value === 'grid-5';
+};
 type RouteState = {
   readonly view: View;
   readonly collectionCode: string;
+  readonly searchCode: string;
+  readonly searchContext: ProductSearchContext;
   readonly query: string;
   readonly checkoutStep?: CheckoutStep;
   readonly productSlug?: string;
 };
 const orderCode = () => `storefront-order-${Date.now()}`;
 const idempotencyKey = () => `storefront-checkout-${Date.now()}`;
+const EMPTY_PRODUCT_FILTERS: ProductFilterState = Object.freeze({
+  availability: [],
+  brands: [],
+  categories: [],
+  collections: [],
+  colors: [],
+  priceMax: '',
+  priceMin: '',
+  saleOnly: false,
+  sizes: [],
+});
+const cmsPathForView = function (view: View): string {
+  if (view === 'collections') return '/collections';
+  if (view === 'plp') return '/shop';
+  return '/';
+};
+
 const routeStateFromLocation = function (rootCollectionCode = ''): RouteState {
-  if (typeof window === 'undefined') return { view: 'home', collectionCode: rootCollectionCode, query: '' };
+  if (typeof window === 'undefined') return { view: 'home', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query: '' };
   const path = window.location.pathname.replace(/\/+$/u, '') || '/';
-  if (path === '/cart') return { view: 'cart', collectionCode: rootCollectionCode, query: '' };
-  if (path === '/checkout') return { view: 'checkout', collectionCode: rootCollectionCode, query: '', checkoutStep: 'customer' };
-  if (path === '/orders') return { view: 'orders', collectionCode: rootCollectionCode, query: '' };
-  if (path.startsWith('/products/')) return { view: 'pdp', collectionCode: rootCollectionCode, query: '', productSlug: decodeURIComponent(path.slice('/products/'.length)) };
-  return { view: 'home', collectionCode: rootCollectionCode, query: '' };
+  const params = new URLSearchParams(window.location.search);
+  const query = params.get('q') ?? '';
+  const collection = params.get('collection') ?? params.get('collectionCode') ?? '';
+  const category = params.get('category') ?? params.get('categoryCode') ?? '';
+  const brand = params.get('brand') ?? params.get('brandCode') ?? '';
+  if (path === '/cart') return { view: 'cart', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query };
+  if (path === '/checkout') return { view: 'checkout', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query, checkoutStep: 'customer' };
+  if (path === '/orders') return { view: 'orders', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query };
+  if (path === '/collections') return { view: 'collections', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query };
+  if (path === '/shop') {
+    if (brand) return { view: 'plp', collectionCode: rootCollectionCode, searchCode: brand, searchContext: 'brand', query };
+    if (category) return { view: 'plp', collectionCode: category, searchCode: category, searchContext: 'category', query };
+    if (collection) return { view: 'plp', collectionCode: collection, searchCode: collection, searchContext: 'collection', query };
+    return { view: 'plp', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'all', query };
+  }
+  if (path.startsWith('/shop/brand/')) return { view: 'plp', collectionCode: rootCollectionCode, searchCode: decodeURIComponent(path.slice('/shop/brand/'.length)), searchContext: 'brand', query };
+  if (path.startsWith('/shop/category/')) {
+    const code = decodeURIComponent(path.slice('/shop/category/'.length));
+    return { view: 'plp', collectionCode: code, searchCode: code, searchContext: 'category', query };
+  }
+  if (path.startsWith('/shop/collection/')) {
+    const code = decodeURIComponent(path.slice('/shop/collection/'.length));
+    return { view: 'plp', collectionCode: code, searchCode: code, searchContext: 'collection', query };
+  }
+  if (path.startsWith('/products/')) return { view: 'pdp', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query: '', productSlug: decodeURIComponent(path.slice('/products/'.length)) };
+  return { view: 'home', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query };
 };
 const facetLabel = (value: unknown): string => {
   if (typeof value === 'string') return value;
@@ -80,57 +136,75 @@ const facetLabel = (value: unknown): string => {
   return 'Available';
 };
 
-const nonDisplaySizes = Object.freeze(['ONE', 'ONE_SIZE']);
-const swatchPalette: Readonly<Record<string, string>> = Object.freeze({
-  amber: '#c78120',
-  black: '#211f1a',
-  clay: '#b86642',
-  cocoa: '#7a5641',
-  cream: '#fff6df',
-  ivory: '#f4efe4',
-  mist: '#cbd4d5',
-  navy: '#202b45',
-  oat: '#d8cfbf',
-  olive: '#767c59',
-  rose: '#d9a6a6',
-  sand: '#d8c6a4'
-});
-const displayLabel = function (value: string | undefined): string {
-  return value ? value.replace(/[-_]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) : '';
-};
 const moneyAmount = function (value: string | number | undefined): number | undefined {
   if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
   if (typeof value !== 'string' || value.trim() === '') return undefined;
   const amount = Number(value);
   return Number.isFinite(amount) ? amount : undefined;
 };
-const productOptionColourCode = function (option: { readonly colourCode?: string; readonly colorCode?: string }): string | undefined {
-  return option.colourCode ?? option.colorCode;
+
+const normalizedText = function (value: string | undefined): string {
+  return (value ?? '').trim().toLowerCase();
 };
-const productColorOptions = function (product: ProductCard | ProductDetail | undefined) {
-  const options = new Map<string, { readonly code: string; readonly label: string; readonly value: string }>();
-  (product?.apparel?.options ?? []).forEach((option) => {
-    const colourCode = productOptionColourCode(option);
-    if (!colourCode || options.has(colourCode)) return;
-    options.set(colourCode, { code: colourCode, label: displayLabel(colourCode), value: swatchPalette[colourCode] ?? '#f6c100' });
-  });
-  return Array.from(options.values());
+
+const humanizeCodeLabel = function (value: string): string {
+  return value
+    .replace(/^agora/iu, '')
+    .replace(/([a-z])([A-Z])/gu, '$1 $2')
+    .replace(/[-_]+/gu, ' ')
+    .trim()
+    .replace(/\s+/gu, ' ')
+    .replace(/\b\w/gu, (letter) => letter.toUpperCase());
 };
-const productSizeOptions = function (product: ProductCard | ProductDetail | undefined, colourCode?: string) {
-  const sizes = new Set<string>();
-  (product?.apparel?.options ?? []).forEach((option) => {
-    if (colourCode && productOptionColourCode(option) !== colourCode) return;
-    if (!option.sizeCode || nonDisplaySizes.includes(option.sizeCode)) return;
-    sizes.add(option.sizeCode);
-  });
-  return Array.from(sizes);
+
+const uniqueSorted = function (values: readonly (string | undefined)[]): readonly string[] {
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value?.trim())))).sort((left, right) => left.localeCompare(right));
 };
-const productVariantForSelection = function (product: ProductCard | ProductDetail | undefined, colourCode?: string, sizeCode?: string) {
-  return (product?.apparel?.options ?? []).find((option) => {
-    if (colourCode && productOptionColourCode(option) !== colourCode) return false;
-    if (sizeCode && option.sizeCode !== sizeCode) return false;
-    return Boolean(option.variantCode);
-  })?.variantCode ?? product?.defaultVariantCode ?? product?.variantCodes?.[0];
+
+const discoveryTotal = function (response: { readonly total?: number; readonly totalCount?: number; readonly productCount?: number; readonly pagination?: { readonly total?: number; readonly totalCount?: number; readonly productCount?: number } }): number | undefined {
+  const candidates = [
+    response.total,
+    response.totalCount,
+    response.productCount,
+    response.pagination?.total,
+    response.pagination?.totalCount,
+    response.pagination?.productCount,
+  ];
+  return candidates.find((candidate): candidate is number => typeof candidate === 'number' && Number.isFinite(candidate) && candidate >= 0);
+};
+
+const includesAny = function (availableValues: readonly string[] | undefined, selectedValues: readonly string[]): boolean {
+  if (!selectedValues.length) return true;
+  const available = new Set((availableValues ?? []).map(normalizedText));
+  return selectedValues.some((value) => available.has(normalizedText(value)));
+};
+
+const productCollectionCodes = function (product: ProductCard): readonly string[] {
+  return uniqueSorted([...(product.collectionCodes ?? []), ...(product.categoryCodes ?? []).filter((code) => normalizedText(code).includes('sale') || normalizedText(code).includes('arrival'))]);
+};
+
+const productColorCodes = function (product: ProductCard): readonly string[] {
+  return uniqueSorted(productColorOptions(product).map((option) => option.label));
+};
+
+const productSizeCodes = function (product: ProductCard): readonly string[] {
+  return uniqueSorted(productSizeOptions(product).map((size) => size));
+};
+
+const filterCount = function (filters: ProductFilterState): number {
+  return filters.brands.length +
+    filters.categories.length +
+    filters.collections.length +
+    filters.colors.length +
+    filters.sizes.length +
+    filters.availability.length +
+    (filters.priceMin.trim() ? 1 : 0) +
+    (filters.priceMax.trim() ? 1 : 0) +
+    (filters.saleOnly ? 1 : 0);
+};
+
+const toggleFilterValue = function (values: readonly string[], value: string): readonly string[] {
+  return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
 };
 const serviceBadgeIcon = function (label: string): LucideIcon {
   const normalizedLabel = label.toLowerCase();
@@ -195,16 +269,27 @@ export function StorefrontPage() {
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [query, setQuery] = useState(initialRouteState.query);
   const [collectionCode, setCollectionCode] = useState(initialRouteState.collectionCode);
+  const [searchCode, setSearchCode] = useState(initialRouteState.searchCode);
+  const [searchContext, setSearchContext] = useState<ProductSearchContext>(initialRouteState.searchContext);
   const [brand, setBrand] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [listingLayout, setListingLayout] = useState<ProductListingLayout>('grid-4');
+  const [selectedFilters, setSelectedFilters] = useState<ProductFilterState>(EMPTY_PRODUCT_FILTERS);
   const [sortCode, setSortCode] = useState('recommended');
-  const [visiblePageSize, setVisiblePageSize] = useState(12);
+  const [listingPage, setListingPage] = useState(1);
+  const [listingHasNextPage, setListingHasNextPage] = useState(false);
   const [products, setProducts] = useState<readonly ProductCard[]>([]);
+  const [productTotalCount, setProductTotalCount] = useState<number>();
   const [homeProducts, setHomeProducts] = useState<readonly ProductCard[]>([]);
   const [facets, setFacets] = useState<Readonly<Record<string, readonly unknown[]>>>({});
   const [selected, setSelected] = useState<ProductDetail>();
   const [pendingProductSlug, setPendingProductSlug] = useState<string | undefined>(initialRouteState.productSlug);
   const [selectedVariantCode, setSelectedVariantCode] = useState<string>();
   const [quickView, setQuickView] = useState<ProductCard>();
+  const [quickViewVariantCode, setQuickViewVariantCode] = useState<string>();
+  const [quickAdd, setQuickAdd] = useState<ProductCard>();
+  const [quickAddVariantCode, setQuickAddVariantCode] = useState<string>();
+  const [quickAddQuantity, setQuickAddQuantity] = useState(1);
   const [quantity, setQuantity] = useState(1);
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>(initialRouteState.checkoutStep ?? 'customer');
   const [checkoutBusy, setCheckoutBusy] = useState(false);
@@ -270,10 +355,17 @@ export function StorefrontPage() {
   const [error, setError] = useState<string>();
   const [cmsPage, setCmsPage] = useState<CmsResolvedPageContract>();
   const [cmsStatus, setCmsStatus] = useState<string>();
+  const [activeMegaMenuCode, setActiveMegaMenuCode] = useState<string>();
   const cart = useLocalCart();
   const collectionCarouselRef = useRef<HTMLElement>(null);
   const homeContent = useMemo(() => cmsPage ? agoraHomeContent(cmsPage, runtimeConfig) : EMPTY_AGORA_HOME_CONTENT, [cmsPage]);
+  const productListingContent = homeContent.productListing;
+  const cmsPath = cmsPathForView(view);
   const headerContent = homeContent.header;
+  const activeMegaMenu = useMemo(
+    () => headerContent.megaMenus.find((menu) => menu.code === activeMegaMenuCode),
+    [activeMegaMenuCode, headerContent.megaMenus],
+  );
   const rootCollectionCode = headerContent.rootCollectionCode ?? homeContent.collections[0]?.code ?? '';
   const cmsHeroSlides = homeContent.heroSlides;
   const activeHeroSlide = cmsHeroSlides[activeHeroIndex] ?? cmsHeroSlides[0];
@@ -286,7 +378,7 @@ export function StorefrontPage() {
       cmsBaseUrl: runtimeConfig.cmsBaseUrl,
       enterpriseCode: runtimeConfig.enterpriseCode,
       site: runtimeConfig.siteCode,
-      path: '/',
+      path: cmsPath,
       locale: runtimeConfig.locale,
       channel: runtimeConfig.channel,
       timeoutMs: runtimeConfig.requestTimeoutMs,
@@ -301,12 +393,19 @@ export function StorefrontPage() {
         setCmsStatus('Published Agora experience is not available yet.');
       });
     return () => controller.abort();
-  }, []);
+  }, [cmsPath]);
 
   useEffect(() => {
     if (!rootCollectionCode || collectionCode) return;
     setCollectionCode(rootCollectionCode);
+    setSearchCode((current) => current || rootCollectionCode);
   }, [collectionCode, rootCollectionCode]);
+
+  useEffect(() => {
+    const defaultLayout = productListingContent?.toolbar?.defaultLayout;
+    if (!isProductListingLayout(defaultLayout)) return;
+    setListingLayout(defaultLayout);
+  }, [productListingContent?.toolbar?.defaultLayout]);
 
   useEffect(() => {
     if (activeHeroIndex < cmsHeroSlides.length) return;
@@ -321,6 +420,34 @@ export function StorefrontPage() {
   }, []);
 
   useEffect(() => {
+    if (!quickAdd) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setQuickAdd(undefined);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [quickAdd]);
+
+  useEffect(() => {
+    if (!quickView) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setQuickView(undefined);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [quickView]);
+
+  useEffect(() => {
     if (view !== 'home' || cmsHeroSlides.length < 2) return undefined;
     const intervalId = window.setInterval(() => {
       setActiveHeroIndex((current) => (current + 1) % cmsHeroSlides.length);
@@ -329,15 +456,38 @@ export function StorefrontPage() {
   }, [cmsHeroSlides.length, view]);
 
   useEffect(() => {
+    if (view !== 'home' && view !== 'plp') return undefined;
     let active = true;
-    void listProducts(runtimeConfig, {
-      categoryCode: (view === 'home' || view === 'plp') && collectionCode ? collectionCode : undefined,
+    const productDiscoveryInput = {
+      brandCode: searchContext === 'brand' ? searchCode : undefined,
+      categoryCode: searchContext === 'category' ? searchCode || collectionCode : undefined,
+      collectionCode: searchContext === 'collection' ? searchCode || collectionCode : undefined,
+      domainCode: runtimeConfig.domainCode,
       q: query || undefined,
-      pageSize: String(visiblePageSize),
+      sortCode,
+      page: String(listingPage),
+      pageSize: String(PRODUCT_LISTING_BATCH_SIZE),
+    };
+    setListingHasNextPage(false);
+    void listProducts(runtimeConfig, {
+      ...(view === 'home' || view === 'plp' ? productDiscoveryInput : {}),
     })
-      .then((response) => {
-        if (active) setProducts(response.products);
+      .then(async (response) => {
+        const responseProducts = response.products;
+        const nextTotalCount = discoveryTotal(response);
+        if (active && listingPage > 1 && responseProducts.length === 0) {
+          setListingPage((current) => Math.max(1, current - 1));
+          return;
+        }
+        if (active) setProducts(responseProducts);
         if (active) setFacets(response.facets ?? {});
+        if (active) setProductTotalCount(nextTotalCount);
+        if (!active || nextTotalCount !== undefined || responseProducts.length < PRODUCT_LISTING_BATCH_SIZE) return;
+        const nextPageResponse = await listProducts(runtimeConfig, {
+          ...productDiscoveryInput,
+          page: String(listingPage + 1),
+        });
+        if (active) setListingHasNextPage(nextPageResponse.products.length > 0);
       })
       .catch((nextError: unknown) => {
         if (active) setError(nextError instanceof Error ? nextError.message : 'Product discovery failed');
@@ -345,7 +495,7 @@ export function StorefrontPage() {
     return () => {
       active = false;
     };
-  }, [collectionCode, query, view, visiblePageSize]);
+  }, [collectionCode, listingPage, query, searchCode, searchContext, sortCode, view]);
 
   useEffect(() => {
     let active = true;
@@ -414,18 +564,126 @@ export function StorefrontPage() {
   };
 
   const openQuickView = (product: ProductCard) => {
+    const initialVariantCode = product.defaultVariantCode ?? product.variantCodes?.[0];
     setQuickView(product);
+    setQuickViewVariantCode(initialVariantCode);
     void getProduct(runtimeConfig, product.productCode)
       .then((response) => {
-        if (response.product) setQuickView(response.product);
+        if (!response.product) return;
+        setQuickView({
+          ...product,
+          ...response.product,
+          availability: response.product.availability ?? product.availability,
+          media: response.product.media ?? product.media,
+          name: response.product.name ?? product.name,
+          price: response.product.price ?? product.price,
+          summary: response.product.summary ?? product.summary,
+        });
+        setQuickViewVariantCode(response.product.defaultVariantCode ?? response.product.variantCodes?.[0] ?? initialVariantCode);
       })
       .catch(() => setQuickView(product));
   };
 
+  const openQuickAdd = (product: ProductCard, variantCode?: string) => {
+    const initialVariantCode = variantCode ?? product.defaultVariantCode ?? product.variantCodes?.[0];
+    setQuickAdd(product);
+    setQuickAddVariantCode(initialVariantCode);
+    setQuickAddQuantity(1);
+    void getProduct(runtimeConfig, product.productCode)
+      .then((response) => {
+        if (!response.product) return;
+        setQuickAdd({
+          ...product,
+          ...response.product,
+          availability: response.product.availability ?? product.availability,
+          media: response.product.media ?? product.media,
+          name: response.product.name ?? product.name,
+          price: response.product.price ?? product.price,
+          summary: response.product.summary ?? product.summary,
+        });
+        setQuickAddVariantCode(variantCode ?? response.product.defaultVariantCode ?? response.product.variantCodes?.[0] ?? initialVariantCode);
+      })
+      .catch(() => setQuickAdd(product));
+  };
+
+  const selectQuickAddColour = function (colourCode: string) {
+    setQuickAddVariantCode(productVariantForSelection(quickAdd, colourCode, quickAddSizeCode));
+  };
+
+  const selectQuickAddSize = function (sizeCode: string) {
+    setQuickAddVariantCode(productVariantForSelection(quickAdd, quickAddColourCode, sizeCode));
+  };
+
+  const selectQuickViewColour = function (colourCode: string) {
+    setQuickViewVariantCode(productVariantForSelection(quickView, colourCode, quickViewSizeCode));
+  };
+
+  const selectQuickViewSize = function (sizeCode: string) {
+    setQuickViewVariantCode(productVariantForSelection(quickView, quickViewColourCode, sizeCode));
+  };
+
+  const addQuickAddToCart = function (buyNow = false) {
+    if (!quickAdd) return;
+    addToCart(quickAdd, quickAddQuantity, quickAddSelection.variantCode);
+    setQuickAdd(undefined);
+    if (buyNow) {
+      setCheckoutStep('customer');
+      setView('checkout');
+      if (typeof window !== 'undefined') window.history.pushState({}, '', '/checkout');
+    }
+  };
+
+  const openCollectionsIndex = function () {
+    setView('collections');
+    if (typeof window !== 'undefined') window.history.pushState({}, '', '/collections');
+  };
+
+  const updateProductFilter = function (key: keyof ProductFilterState, value: string | boolean | readonly string[]) {
+    setListingPage(1);
+    setSelectedFilters((current) => ({ ...current, [key]: value }));
+  };
+
+  const toggleProductFilter = function (key: ProductFilterKey, value: string) {
+    setListingPage(1);
+    setSelectedFilters((current) => ({ ...current, [key]: toggleFilterValue(current[key], value) }));
+  };
+
+  const clearProductFilters = function () {
+    setBrand('');
+    setListingPage(1);
+    setSelectedFilters(EMPTY_PRODUCT_FILTERS);
+  };
+
+  const openProductListing = function (context: ProductSearchContext = 'all', code = '') {
+    const params = new URLSearchParams();
+    if (query) params.set('q', query);
+    if (context === 'brand' && code) params.set('brand', code);
+    if (context === 'category' && code) params.set('category', code);
+    if (context === 'collection' && code) params.set('collection', code);
+    setSearchContext(context);
+    setSearchCode(code);
+    if (context === 'category' || context === 'collection') setCollectionCode(code);
+    setBrand('');
+    setSelectedFilters(EMPTY_PRODUCT_FILTERS);
+    setListingPage(1);
+    setView('plp');
+    if (typeof window !== 'undefined') {
+      const nextPath = params.toString() ? `/shop?${params.toString()}` : '/shop';
+      window.history.pushState({}, '', nextPath);
+    }
+  };
+
   const openCollection = (code: string) => {
     if (!code) return;
-    setCollectionCode(code);
-    setView('plp');
+    openProductListing('collection', code);
+  };
+
+  const openCollectionTile = function (collection: AgoraCollectionTile) {
+    if (collection.path) {
+      openAction({ label: collection.label, path: collection.path });
+      return;
+    }
+    openCollection(collection.code);
   };
   const scrollCollectionCarousel = function (direction: 'previous' | 'next') {
     const collectionRail = collectionCarouselRef.current;
@@ -796,10 +1054,32 @@ export function StorefrontPage() {
     }
   };
 
-  const brands = Array.from(new Set(products.map((product) => productBrandLabel(product)).filter(Boolean))) as string[];
-  const visibleProducts = [...(brand ? products.filter((product) => productBrandLabel(product) === brand) : products)].sort((left, right) => {
-    if (sortCode === 'price-asc') return Number(left.price?.unitAmount ?? 0) - Number(right.price?.unitAmount ?? 0);
-    if (sortCode === 'price-desc') return Number(right.price?.unitAmount ?? 0) - Number(left.price?.unitAmount ?? 0);
+  const brands = uniqueSorted(products.map((product) => productBrandLabel(product)));
+  const categoryOptions = uniqueSorted(products.flatMap((product) => product.categoryCodes ?? []));
+  const collectionOptions = uniqueSorted(products.flatMap((product) => productCollectionCodes(product)));
+  const colorOptions = uniqueSorted(products.flatMap((product) => productColorCodes(product)));
+  const sizeOptions = uniqueSorted(products.flatMap((product) => productSizeCodes(product)));
+  const availabilityOptions = uniqueSorted(products.map((product) => productAvailabilityLabel(product)));
+  const activeBrandFilters = uniqueSorted([brand, ...selectedFilters.brands]);
+  const selectedPriceMin = moneyAmount(selectedFilters.priceMin);
+  const selectedPriceMax = moneyAmount(selectedFilters.priceMax);
+  const activeFilterCount = filterCount(selectedFilters) + (brand ? 1 : 0);
+  const visibleProducts = products.filter((product) => {
+    const productPrice = moneyAmount(product.price?.unitAmount);
+    if (!includesAny(productBrandLabel(product) ? [productBrandLabel(product) as string] : [], activeBrandFilters)) return false;
+    if (!includesAny(product.categoryCodes, selectedFilters.categories)) return false;
+    if (!includesAny(productCollectionCodes(product), selectedFilters.collections)) return false;
+    if (!includesAny(productColorCodes(product), selectedFilters.colors)) return false;
+    if (!includesAny(productSizeCodes(product), selectedFilters.sizes)) return false;
+    if (!includesAny([productAvailabilityLabel(product)], selectedFilters.availability)) return false;
+    if (selectedFilters.saleOnly && !productCollectionCodes(product).some((code) => normalizedText(code).includes('sale'))) return false;
+    if (productPrice === undefined && (selectedPriceMin !== undefined || selectedPriceMax !== undefined)) return false;
+    if (selectedPriceMin !== undefined && productPrice !== undefined && productPrice < selectedPriceMin) return false;
+    if (selectedPriceMax !== undefined && productPrice !== undefined && productPrice > selectedPriceMax) return false;
+    return true;
+  }).sort((left, right) => {
+    if (sortCode === 'price-asc') return (moneyAmount(left.price?.unitAmount) ?? 0) - (moneyAmount(right.price?.unitAmount) ?? 0);
+    if (sortCode === 'price-desc') return (moneyAmount(right.price?.unitAmount) ?? 0) - (moneyAmount(left.price?.unitAmount) ?? 0);
     if (sortCode === 'name-asc') return String(left.name ?? left.productCode).localeCompare(String(right.name ?? right.productCode));
     return 0;
   });
@@ -807,6 +1087,11 @@ export function StorefrontPage() {
   const homeRailProducts = homeProducts.length ? homeProducts : products;
   const featuredProducts = selectedHomeProducts(homeContent.topPicks.productCodes, homeRailProducts, homeContent.topPicks.pageSize ?? 4);
   const bestSelling = selectedHomeProducts(homeContent.bestSelling.productCodes, homeRailProducts, homeContent.bestSelling.pageSize ?? 4);
+  const projectedListingProducts = selectedHomeProducts(
+    productListingContent?.projectedProducts?.productCodes,
+    homeRailProducts,
+    productListingContent?.projectedProducts?.pageSize ?? 8,
+  );
   const collections = homeContent.collections;
   const selectedShippingOption = shippingOption(checkoutForm.shippingMethod, shippingMethodOptions);
   const selectedPaymentOption = paymentOption(checkoutForm.paymentMethod);
@@ -826,6 +1111,109 @@ export function StorefrontPage() {
   const compareProducts = products.filter((product) => compareProductCodes.includes(product.productCode));
   const recommendedProductCodes = selected?.relatedProductCodes?.length ? selected.relatedProductCodes : [];
   const recommendedProducts = products.filter((product) => recommendedProductCodes.includes(product.productCode) && product.productCode !== selected?.productCode).slice(0, 3);
+  const selectedCollection = searchContext === 'all'
+    ? undefined
+    : collections.find((collection) => collection.code === collectionCode || collection.code === searchCode);
+  const collectionLabelByCode = new Map(collections.map((collection) => [collection.code, collection.label]));
+  const filterOptionLabel = function (key: ProductFilterKey, value: string): string {
+    if (key === 'categories' || key === 'collections') return collectionLabelByCode.get(value) ?? humanizeCodeLabel(value);
+    return value;
+  };
+  const collectionIndexContent = homeContent.collectionIndex;
+  const listingEyebrow = searchContext === 'brand'
+    ? 'Brand edit'
+    : searchContext === 'category'
+      ? 'Category edit'
+      : searchContext === 'collection'
+        ? 'Collection edit'
+        : 'Product Listing';
+  const listingHeading = selectedCollection?.label ?? productListingContent?.heading ?? 'Shop products';
+  const listingSummary = selectedCollection?.summary ?? productListingContent?.summary ?? 'Explore the latest apparel pieces resolved from Commerce discovery.';
+  const listingResultLabel = productListingContent?.resultLabel ?? 'products';
+  const completeStatusLabel = productListingContent?.completeStatusLabel ?? `All matching ${listingResultLabel} are visible`;
+  const displayedProductCount = visibleProducts.length;
+  const listingTotalCount = productTotalCount !== undefined ? Math.max(productTotalCount, displayedProductCount) : undefined;
+  const listingPageStart = displayedProductCount ? ((listingPage - 1) * PRODUCT_LISTING_BATCH_SIZE) + 1 : 0;
+  const listingPageEnd = displayedProductCount ? listingPageStart + displayedProductCount - 1 : 0;
+  const listingTotalPages = listingTotalCount !== undefined ? Math.max(1, Math.ceil(listingTotalCount / PRODUCT_LISTING_BATCH_SIZE)) : undefined;
+  const listingCountText = listingTotalCount !== undefined
+    ? `Showing ${listingPageStart}-${listingPageEnd} of ${listingTotalCount} ${listingResultLabel}`
+    : `Showing ${listingPageStart}-${listingPageEnd} ${listingResultLabel}`;
+  const canShowNextListingPage = listingTotalPages !== undefined
+    ? listingPage < listingTotalPages
+    : listingHasNextPage;
+  const canShowPreviousListingPage = listingPage > 1;
+  const listingPaginationPages = listingTotalPages !== undefined
+    ? Array.from({ length: listingTotalPages }, (_, index) => index + 1).filter((pageNumber) => (
+      pageNumber === 1 ||
+      pageNumber === listingTotalPages ||
+      Math.abs(pageNumber - listingPage) <= 1
+    ))
+    : Array.from(new Set([
+      1,
+      ...(listingPage > 2 ? [listingPage - 1] : []),
+      ...(listingPage > 1 ? [listingPage] : []),
+      ...(canShowNextListingPage ? [listingPage + 1] : []),
+    ])).sort((left, right) => left - right);
+  const productListingHeroFallbackMedia = visibleProducts
+    .map((product): AgoraMediaItem | undefined => {
+      const image = productImageUrl(product, runtimeConfig.mediaBaseUrl);
+      if (!image) return undefined;
+      return {
+        alt: product.name ?? product.productCode,
+        image,
+        mediaCode: product.productCode,
+      };
+    })
+    .filter((item): item is AgoraMediaItem => Boolean(item))
+    .slice(0, 4);
+  const productListingDefaultHeroMedia: AgoraMediaItem = {
+    alt: 'Agora apparel product listing editorial banner',
+    image: mediaDeliveryUrl(runtimeConfig.mediaBaseUrl, PRODUCT_LISTING_DEFAULT_HERO_MEDIA_CODE),
+    mediaCode: PRODUCT_LISTING_DEFAULT_HERO_MEDIA_CODE,
+  };
+  const productListingHeroMedia = productListingContent?.heroMedia?.image
+    ? productListingContent.heroMedia
+    : productListingDefaultHeroMedia;
+  const productListingHeroSupportingMedia = productListingContent?.heroSupportingMedia?.length
+    ? productListingContent.heroSupportingMedia
+    : productListingHeroMedia.mediaCode === productListingDefaultHeroMedia.mediaCode
+      ? []
+      : productListingHeroFallbackMedia.slice(1);
+  const productListingHeroHasMedia = Boolean(productListingHeroMedia?.image);
+  const activeFilterLabels = [
+    ...activeBrandFilters.map((value) => ({ key: `brand:${value}`, label: `Brand: ${value}` })),
+    ...selectedFilters.categories.map((value) => ({ key: `category:${value}`, label: `Category: ${filterOptionLabel('categories', value)}` })),
+    ...selectedFilters.collections.map((value) => ({ key: `collection:${value}`, label: `Collection: ${filterOptionLabel('collections', value)}` })),
+    ...selectedFilters.colors.map((value) => ({ key: `color:${value}`, label: `Color: ${value}` })),
+    ...selectedFilters.sizes.map((value) => ({ key: `size:${value}`, label: `Size: ${value}` })),
+    ...selectedFilters.availability.map((value) => ({ key: `availability:${value}`, label: value })),
+    ...(selectedFilters.saleOnly ? [{ key: 'saleOnly', label: 'Sale only' }] : []),
+    ...(selectedFilters.priceMin ? [{ key: 'priceMin', label: `Min ${selectedFilters.priceMin}` }] : []),
+    ...(selectedFilters.priceMax ? [{ key: 'priceMax', label: `Max ${selectedFilters.priceMax}` }] : []),
+  ];
+  const filterOptionCount = function (key: ProductFilterKey, value: string): number {
+    return products.filter((product) => {
+      if (key === 'brands') return productBrandLabel(product) === value;
+      if (key === 'categories') return (product.categoryCodes ?? []).includes(value);
+      if (key === 'collections') return productCollectionCodes(product).includes(value);
+      if (key === 'colors') return productColorCodes(product).includes(value);
+      if (key === 'sizes') return productSizeCodes(product).includes(value);
+      return productAvailabilityLabel(product) === value;
+    }).length;
+  };
+  const effectiveSelectedFilters: ProductFilterState = Object.freeze({ ...selectedFilters, brands: activeBrandFilters });
+  const listingFilterGroups: readonly ProductFilterOptionGroup[] = Object.freeze([
+    { key: 'categories', label: 'Product Categories', options: categoryOptions },
+    { key: 'sizes', label: 'Size', options: sizeOptions },
+    { key: 'colors', label: 'Color', options: colorOptions },
+    { key: 'brands', label: 'Brand', options: brands },
+    { key: 'collections', label: 'Collection', options: collectionOptions },
+    { key: 'availability', label: 'Availability', options: availabilityOptions },
+  ]);
+  const searchFacetsText = facetEntries.length
+    ? facetEntries.map(([facetCode, values]) => `${facetCode}: ${values.map((value) => facetLabel(value)).join(', ')}`).join(' · ')
+    : undefined;
 
   const lifecycleEvidenceLabel = (record: { readonly evidence?: Readonly<Record<string, unknown>> }, key: string) => {
     const value = record.evidence?.[key];
@@ -865,7 +1253,10 @@ export function StorefrontPage() {
       const nextRouteState = routeStateFromLocation(rootCollectionCode);
       setView(nextRouteState.view);
       setCollectionCode(nextRouteState.collectionCode);
+      setSearchCode(nextRouteState.searchCode);
+      setSearchContext(nextRouteState.searchContext);
       setQuery(nextRouteState.query);
+      setListingPage(1);
       setPendingProductSlug(nextRouteState.productSlug);
       if (nextRouteState.view !== 'pdp') setSelected(undefined);
       if (nextRouteState.checkoutStep) setCheckoutStep(nextRouteState.checkoutStep);
@@ -887,9 +1278,26 @@ export function StorefrontPage() {
     }
     if (action.path === '/' || action.path === '#home') {
       setView('home');
+      if (typeof window !== 'undefined') window.history.pushState({}, '', '/');
       return;
     }
-    if (action.path) window.history.pushState({}, '', action.path);
+    if (action.path === '/collections') {
+      openCollectionsIndex();
+      return;
+    }
+    if (action.path === '/shop') {
+      openProductListing('all');
+      return;
+    }
+    if (action.path) {
+      window.history.pushState({}, '', action.path);
+      const nextRouteState = routeStateFromLocation(rootCollectionCode);
+      setView(nextRouteState.view);
+      setCollectionCode(nextRouteState.collectionCode);
+      setSearchCode(nextRouteState.searchCode);
+      setSearchContext(nextRouteState.searchContext);
+      setQuery(nextRouteState.query);
+    }
   };
 
   const lifecycleInput = () => ({
@@ -938,13 +1346,58 @@ export function StorefrontPage() {
       .catch(() => setLifecycleStatus(`${requestType} local fallback request captured for ${orderCodeForLifecycle}`));
   };
 
-  const selectedColourCode = productOptionColourCode(selected?.apparel?.options?.find((option) => option.variantCode === selectedVariantCode) ?? {}) ?? productOptionColourCode(selected?.apparel?.options?.[0] ?? {});
-  const selectedSizeCode = selected?.apparel?.options?.find((option) => option.variantCode === selectedVariantCode)?.sizeCode;
+  const selectedSelection = apparelSelectionForVariant(selected, selectedVariantCode);
+  const selectedColourCode = selectedSelection.colourCode;
+  const selectedSizeCode = selectedSelection.sizeCode;
   const selectedColorOptions = productColorOptions(selected);
   const selectedSizeOptions = productSizeOptions(selected, selectedColourCode);
+  const quickAddSelection = apparelSelectionForVariant(quickAdd, quickAddVariantCode);
+  const quickAddColourCode = quickAddSelection.colourCode;
+  const quickAddSizeCode = quickAddSelection.sizeCode;
+  const quickAddColorOptions = productColorOptions(quickAdd);
+  const quickAddSizeOptions = productSizeOptions(quickAdd, quickAddColourCode);
+  const quickAddImage = quickAdd ? apparelImageUrlForVariant(quickAdd, quickAddSelection.variantCode, runtimeConfig.mediaBaseUrl) : undefined;
+  const quickAddPrice = `${quickAdd?.price?.currency ?? 'USD'} ${quickAdd?.price?.unitAmount ?? '0.00'}`;
+  const quickViewSelection = apparelSelectionForVariant(quickView, quickViewVariantCode);
+  const quickViewColourCode = quickViewSelection.colourCode;
+  const quickViewSizeCode = quickViewSelection.sizeCode;
+  const quickViewColorOptions = productColorOptions(quickView);
+  const quickViewSizeOptions = productSizeOptions(quickView, quickViewColourCode);
+  const quickViewImage = quickView ? apparelImageUrlForVariant(quickView, quickViewSelection.variantCode, runtimeConfig.mediaBaseUrl) : undefined;
+  const quickViewPrice = `${quickView?.price?.currency ?? 'USD'} ${quickView?.price?.unitAmount ?? '0.00'}`;
   const useCmsHeroImages = true;
   const headerLogoText = headerContent.logoText ?? 'NODICS';
   const headerSubtitle = headerContent.subtitle ?? 'AGORA';
+  const storefrontLabels = homeContent.storefrontLabels;
+  const addToCartLabel = storefrontLabels.addToCart ?? 'Add to cart';
+  const availableColorsLabel = storefrontLabels.availableColors ?? 'Available colors';
+  const availableSizesLabel = storefrontLabels.availableSizes ?? 'Available sizes';
+  const backToListingLabel = storefrontLabels.backToListing ?? 'Back to listing';
+  const buyNowLabel = storefrontLabels.buyNow ?? 'Buy it now';
+  const closeQuickAddLabel = storefrontLabels.closeQuickAdd ?? 'Close quick add';
+  const closeQuickViewLabel = storefrontLabels.closeQuickView ?? 'Close';
+  const colorLabel = storefrontLabels.color ?? 'Color';
+  const colorsLabel = storefrontLabels.colors ?? 'Colors';
+  const compareLabel = storefrontLabels.compare ?? 'Compare';
+  const decreaseQuantityLabel = storefrontLabels.decreaseQuantity ?? 'Decrease quantity';
+  const descriptionLabel = storefrontLabels.description ?? 'Description';
+  const featuredProductsAriaLabel = storefrontLabels.featuredProductsAriaLabel ?? 'Featured products';
+  const increaseQuantityLabel = storefrontLabels.increaseQuantity ?? 'Increase quantity';
+  const quantityLabel = storefrontLabels.quantity ?? 'Quantity';
+  const quickAddLabel = storefrontLabels.quickAdd ?? 'Quick Add';
+  const quickViewTitleLabel = storefrontLabels.quickViewTitle ?? 'Quick View';
+  const recommendationsEyebrowLabel = storefrontLabels.recommendationsEyebrow ?? 'Curated recommendations';
+  const recommendationsHeadingLabel = storefrontLabels.recommendationsHeading ?? 'Related pieces';
+  const recommendationsSummaryLabel = storefrontLabels.recommendationsSummary ?? 'Recommendations are resolved from Commerce product relationships.';
+  const removeFromCompareLabel = storefrontLabels.removeFromCompare ?? 'Remove from compare';
+  const removeFromWishlistLabel = storefrontLabels.removeFromWishlist ?? 'Remove from wishlist';
+  const reviewsLabel = storefrontLabels.reviews ?? 'Reviews';
+  const selectColorPrefix = storefrontLabels.selectColorPrefix ?? 'Select';
+  const shippingReturnsLabel = storefrontLabels.shippingReturns ?? 'Shipping & returns';
+  const shippingReturnsText = storefrontLabels.shippingReturnsText ?? 'Free shipping threshold and 14-day returns are resolved from backend policy.';
+  const sizeLabel = storefrontLabels.size ?? 'Size';
+  const addToWishlistLabel = storefrontLabels.addToWishlist ?? 'Add to wishlist';
+  const bestSellingProductsAriaLabel = storefrontLabels.bestSellingProductsAriaLabel ?? 'Best selling products';
   const hasFooterContent = Boolean(
     homeContent.footer.summary ||
       homeContent.footer.contactEmail ||
@@ -954,6 +1407,39 @@ export function StorefrontPage() {
       homeContent.footer.copyright ||
       homeContent.footer.brandLabel,
   );
+  const renderStorefrontFooter = function () {
+    if (!hasFooterContent) return null;
+    return (
+      <footer className="storefront-footer">
+        <section className="storefront-footer-brand">
+          <NodicsBrand logoText={headerLogoText} subtitle={headerSubtitle} />
+          {homeContent.footer.summary ? <p>{homeContent.footer.summary}</p> : null}
+          {homeContent.footer.contactEmail ? <a href={`mailto:${homeContent.footer.contactEmail}`}>{homeContent.footer.contactEmail}</a> : null}
+        </section>
+        {homeContent.footer.groups.map((group) => (
+          <section className="storefront-footer-links" key={group.title}>
+            <h3>{group.title}</h3>
+            {group.links.map((link) => <span className="footer-link" key={link}>{link}</span>)}
+          </section>
+        ))}
+        {homeContent.footer.newsletter ? (
+          <section className="storefront-footer-newsletter">
+            {homeContent.footer.newsletter.title ? <h3>{homeContent.footer.newsletter.title}</h3> : null}
+            {homeContent.footer.newsletter.text ? <p>{homeContent.footer.newsletter.text}</p> : null}
+            <form onSubmit={(event) => event.preventDefault()}>
+              <input aria-label="Newsletter email" placeholder={homeContent.footer.newsletter?.placeholder} />
+              <button type="submit">{homeContent.footer.newsletter?.buttonLabel}</button>
+            </form>
+          </section>
+        ) : null}
+        <section className="storefront-footer-legal">
+          {homeContent.footer.copyright ? <span>{homeContent.footer.copyright}</span> : null}
+          {homeContent.footer.brandLabel ? <span>{homeContent.footer.brandLabel}</span> : null}
+          {homeContent.footer.legalLinks.map((link) => <span key={link}>{link}</span>)}
+        </section>
+      </footer>
+    );
+  };
   const renderHeaderAction = (action: AgoraLinkAction, className?: string) => {
     if (action.collectionCode) {
       return (
@@ -966,6 +1452,99 @@ export function StorefrontPage() {
       <a className={className} href={action.path} key={`${action.label}-${action.path}`}>
         {action.label}
       </a>
+    );
+  };
+  const renderActionButton = function (action: AgoraLinkAction | undefined) {
+    if (!action) return null;
+    return (
+      <button className="secondary" onClick={() => openAction(action)} type="button">
+        {action.label}
+      </button>
+    );
+  };
+  const megaMenuPrimaryAction = function (menu: AgoraMegaMenu): AgoraLinkAction {
+    return {
+      label: menu.label,
+      ...(menu.collectionCode ? { collectionCode: menu.collectionCode } : {}),
+      ...(menu.path ? { path: menu.path } : {}),
+    };
+  };
+  const openMegaMenuAction = function (menu: AgoraMegaMenu) {
+    setActiveMegaMenuCode(undefined);
+    openAction(megaMenuPrimaryAction(menu));
+  };
+  const renderMegaMenuPanel = function () {
+    if (!activeMegaMenu) return null;
+    return (
+      <section
+        aria-label={`${activeMegaMenu.label} menu`}
+        className="agora-mega-menu"
+        onMouseEnter={() => setActiveMegaMenuCode(activeMegaMenu.code)}
+        onMouseLeave={() => setActiveMegaMenuCode(undefined)}
+      >
+        <div className="agora-mega-menu-intro">
+          {activeMegaMenu.eyebrow ? <span>{activeMegaMenu.eyebrow}</span> : null}
+          <h2>{activeMegaMenu.label}</h2>
+          {activeMegaMenu.summary ? <p>{activeMegaMenu.summary}</p> : null}
+          <button onClick={() => openMegaMenuAction(activeMegaMenu)} type="button">
+            Explore {activeMegaMenu.label} <ArrowUpRight aria-hidden="true" size={16} />
+          </button>
+        </div>
+        <div className="agora-mega-menu-groups">
+          {activeMegaMenu.groups.map((group) => (
+            <section key={group.title}>
+              <h3>{group.title}</h3>
+              {group.summary ? <p>{group.summary}</p> : null}
+              <ul>
+                {group.links.map((link) => (
+                  <li key={`${group.title}-${link.label}`}>
+                    <button onClick={() => {
+                      setActiveMegaMenuCode(undefined);
+                      openAction(link);
+                    }} type="button">
+                      <span>
+                        {link.label}
+                        {link.summary ? <small>{link.summary}</small> : null}
+                      </span>
+                      {link.badge ? <em>{link.badge}</em> : null}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+        {activeMegaMenu.featureTiles.length ? (
+          <div className="agora-mega-menu-feature-grid">
+            {activeMegaMenu.featureTiles.map((tile) => (
+              <button key={tile.title} onClick={() => {
+                setActiveMegaMenuCode(undefined);
+                openAction(tile.action ?? { label: tile.title, collectionCode: activeMegaMenu.collectionCode, path: activeMegaMenu.path });
+              }} type="button">
+                {tile.image ? <img alt={tile.alt ?? tile.title} src={tile.image} /> : <span className="agora-mega-menu-image-placeholder" aria-label={`${tile.title} image unavailable`} role="img" />}
+                {tile.badge ? <span>{tile.badge}</span> : null}
+                <strong>{tile.title}</strong>
+                {tile.summary ? <small>{tile.summary}</small> : null}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {activeMegaMenu.promoStripe.length ? (
+          <div className="agora-mega-menu-promo-strip">
+            {activeMegaMenu.promoStripe.map((promo) => (
+              <button key={promo.label} onClick={() => {
+                setActiveMegaMenuCode(undefined);
+                openAction(promo);
+              }} type="button">
+                {promo.eyebrow ? <small>{promo.eyebrow}</small> : null}
+                <span>{promo.label}</span>
+                {promo.text ? <em>{promo.text}</em> : null}
+                {promo.badge ? <strong>{promo.badge}</strong> : null}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </section>
     );
   };
 
@@ -1004,18 +1583,36 @@ export function StorefrontPage() {
         ) : null}
       </aside>
       <header className={`storefront-header${headerScrolled ? ' is-scrolled' : ''}`}>
-        <button className="agora-brand" onClick={() => setView('home')} type="button" aria-label="Nodics Agora home">
+        <button className="agora-brand" onClick={() => openAction({ label: 'Home', path: '/' })} type="button" aria-label="Nodics Agora home">
           <NodicsBrand logoText={headerLogoText} subtitle={headerSubtitle} />
         </button>
         <nav className="nav-pills" aria-label="Storefront navigation">
-          {headerContent.navigation.map((item) => (
+          {headerContent.megaMenus.length ? headerContent.megaMenus.map((menu) => {
+            const hasPanel = menu.groups.length || menu.featureTiles.length || menu.promoStripe.length;
+            const active = activeMegaMenuCode === menu.code || collectionCode === menu.collectionCode;
+            return (
+              <button
+                aria-expanded={hasPanel ? activeMegaMenuCode === menu.code : undefined}
+                className={active ? '' : 'secondary'}
+                key={menu.code}
+                onClick={() => hasPanel ? setActiveMegaMenuCode(menu.code) : openMegaMenuAction(menu)}
+                onFocus={() => hasPanel ? setActiveMegaMenuCode(menu.code) : undefined}
+                onMouseEnter={() => hasPanel ? setActiveMegaMenuCode(menu.code) : undefined}
+                type="button"
+              >
+                {menu.label}
+                {menu.badge ? <span className="nav-badge">{menu.badge}</span> : null}
+                {hasPanel ? <ChevronDown aria-hidden="true" size={15} /> : null}
+              </button>
+            );
+          }) : headerContent.navigation.map((item) => (
             <button className={collectionCode === item.collectionCode ? '' : 'secondary'} key={item.label} onClick={() => item.collectionCode ? openCollection(item.collectionCode) : openAction(item)} type="button">
               {item.label} {item.dropdown ? <ChevronDown aria-hidden="true" size={15} /> : null}
             </button>
           ))}
         </nav>
         <div className="commerce-actions">
-          {headerContent.searchEnabled ? <button className="icon-action" onClick={() => setView('plp')} type="button" aria-label="Search products"><Search aria-hidden="true" size={24} /></button> : null}
+          {headerContent.searchEnabled ? <button className="icon-action" onClick={() => openProductListing('all')} type="button" aria-label="Search products"><Search aria-hidden="true" size={24} /></button> : null}
           {headerContent.accountPreviewEnabled ? (
             <button className="icon-action" onClick={() => setAccountPanelOpen((current) => !current)} type="button" aria-label={customerSession.accessToken ? customerSession.email : 'Account'}>
               <UserRound aria-hidden="true" size={24} />
@@ -1034,6 +1631,7 @@ export function StorefrontPage() {
           ) : null}
         </div>
       </header>
+      {renderMegaMenuPanel()}
       {accountPanelOpen ? (
         <section className="account-drawer" aria-label="Customer session">
           {customerSession.accessToken ? (
@@ -1156,7 +1754,7 @@ export function StorefrontPage() {
       ) : null}
       {view === 'pdp' && selected ? (
         <section className="pdp">
-          <button onClick={() => setView('plp')} type="button">Back to listing</button>
+          <button onClick={() => setView('plp')} type="button">{backToListingLabel}</button>
           <div className="pdp-layout">
               <div className="pdp-gallery">
               {(productGalleryUrls(selected, runtimeConfig.mediaBaseUrl).length ? productGalleryUrls(selected, runtimeConfig.mediaBaseUrl) : [undefined]).slice(0, 4).map((item, index) => {
@@ -1178,8 +1776,8 @@ export function StorefrontPage() {
               <p>{productAvailabilityLabel(selected)}</p>
               {selectedColorOptions.length ? (
                 <div className="pdp-option-group">
-                  <strong>Color</strong>
-                  <div className="pdp-color-options" aria-label="Choose color">
+                  <strong>{colorLabel}</strong>
+                  <div className="pdp-color-options" aria-label={availableColorsLabel}>
                     {selectedColorOptions.map((option) => (
                       <button
                         aria-label={option.label}
@@ -1199,8 +1797,8 @@ export function StorefrontPage() {
               ) : null}
               {selectedSizeOptions.length ? (
                 <div className="pdp-option-group">
-                  <strong>Size</strong>
-                  <div className="sizes" aria-label="Choose size">
+                  <strong>{sizeLabel}</strong>
+                  <div className="sizes" aria-label={availableSizesLabel}>
                     {selectedSizeOptions.map((size) => (
                       <button className={selectedSizeCode === size ? '' : 'secondary'} key={size} onClick={() => setSelectedVariantCode(productVariantForSelection(selected, selectedColourCode, size))} type="button">{size}</button>
                     ))}
@@ -1208,27 +1806,27 @@ export function StorefrontPage() {
                 </div>
               ) : null}
               <label className="quantity">
-                Quantity
+                {quantityLabel}
                 <input
-                  aria-label="Quantity"
+                  aria-label={quantityLabel}
                   min="1"
                   onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
                   type="number"
                   value={quantity}
                 />
               </label>
-              <button onClick={addSelectedToCart} type="button">Add to cart</button>
+              <button onClick={addSelectedToCart} type="button">{addToCartLabel}</button>
               <div className="pdp-tabs">
                 <details open>
-                  <summary>Description</summary>
+                  <summary>{descriptionLabel}</summary>
                   <p>{selected.summary ?? selected.description}</p>
                 </details>
                 <details>
-                  <summary>Shipping & returns</summary>
-                  <p>Free shipping threshold and 14-day returns mirror the reference storefront policy.</p>
+                  <summary>{shippingReturnsLabel}</summary>
+                  <p>{shippingReturnsText}</p>
                 </details>
                 <details>
-                  <summary>Reviews</summary>
+                  <summary>{reviewsLabel}</summary>
                   {reviewAggregate?.count ? (
                     <p>
                       Average rating {reviewAggregate.average?.toFixed(1)} from {reviewAggregate.count} review(s)
@@ -1253,19 +1851,19 @@ export function StorefrontPage() {
               </div>
               <div className="quick-view-actions">
                 <button className="secondary" onClick={() => toggleWishlist(selected)} type="button">
-                  {wishlistProductCodes.includes(selected.productCode) ? 'Remove from wishlist' : 'Add to wishlist'}
+                  {wishlistProductCodes.includes(selected.productCode) ? removeFromWishlistLabel : addToWishlistLabel}
                 </button>
                 <button className="secondary" onClick={() => toggleCompare(selected)} type="button">
-                  {compareProductCodes.includes(selected.productCode) ? 'Remove from compare' : 'Compare product'}
+                  {compareProductCodes.includes(selected.productCode) ? removeFromCompareLabel : compareLabel}
                 </button>
               </div>
             </article>
           </div>
           <section className="section-header">
             <div>
-              <p className="eyebrow">Curated recommendations</p>
-              <h2>Related pieces</h2>
-              <p className="muted">Recommendations are resolved from Commerce product relationships.</p>
+              <p className="eyebrow">{recommendationsEyebrowLabel}</p>
+              <h2>{recommendationsHeadingLabel}</h2>
+              <p className="muted">{recommendationsSummaryLabel}</p>
             </div>
           </section>
           <section className="grid" aria-label="Recommended products">
@@ -1273,9 +1871,11 @@ export function StorefrontPage() {
               <ProductCardView
                 compareSelected={compareProductCodes.includes(product.productCode)}
                 key={product.productCode}
+                labels={storefrontLabels}
                 onAdd={addToCart}
                 onCompare={toggleCompare}
                 onOpen={openProduct}
+                onQuickAdd={openQuickAdd}
                 onQuickView={openQuickView}
                 onWishlist={toggleWishlist}
                 product={product}
@@ -1594,7 +2194,7 @@ export function StorefrontPage() {
                   {homeContent.collectionHeader?.eyebrow ? <p className="eyebrow">{homeContent.collectionHeader.eyebrow}</p> : null}
                   {homeContent.collectionHeader?.heading ? <h2>{homeContent.collectionHeader.heading}</h2> : null}
                 </div>
-                {homeContent.collectionHeader?.actionLabel ? <button className="collection-view-all" onClick={() => setView('plp')} type="button">{homeContent.collectionHeader.actionLabel}</button> : null}
+                {homeContent.collectionHeader?.actionLabel ? <button className="collection-view-all" onClick={openCollectionsIndex} type="button">{homeContent.collectionHeader.actionLabel}</button> : null}
               </section>
               <div className="collection-carousel-shell">
                 <button className="collection-carousel-control collection-carousel-control-previous" onClick={() => scrollCollectionCarousel('previous')} type="button" aria-label="Previous collections">
@@ -1603,7 +2203,7 @@ export function StorefrontPage() {
                 <div className="collection-carousel-viewport">
                   <section className="collection-grid collection-grid-photo" ref={collectionCarouselRef} aria-label="Shop by collection">
                     {homeContent.collections.map((collection) => (
-                      <button key={collection.label} onClick={() => openCollection(collection.code)} type="button">
+                      <button key={collection.label} onClick={() => openCollectionTile(collection)} type="button">
                         <div className="collection-card-media">
                           {collection.image ? <img alt={collection.alt ?? ''} src={collection.image} /> : null}
                         </div>
@@ -1649,11 +2249,13 @@ export function StorefrontPage() {
                 </div>
               </section>
               <ProductCarousel
-                ariaLabel="Featured products"
+                ariaLabel={featuredProductsAriaLabel}
                 compareProductCodes={compareProductCodes}
+                labels={storefrontLabels}
                 onAdd={addToCart}
                 onCompare={toggleCompare}
                 onOpen={openProduct}
+                onQuickAdd={openQuickAdd}
                 onQuickView={openQuickView}
                 onWishlist={toggleWishlist}
                 products={featuredProducts}
@@ -1693,12 +2295,14 @@ export function StorefrontPage() {
                 </div>
               </section>
               <ProductCarousel
-                ariaLabel="Best selling products"
+                ariaLabel={bestSellingProductsAriaLabel}
                 compareProductCodes={compareProductCodes}
                 direction="backward"
+                labels={storefrontLabels}
                 onAdd={addToCart}
                 onCompare={toggleCompare}
                 onOpen={openProduct}
+                onQuickAdd={openQuickAdd}
                 onQuickView={openQuickView}
                 onWishlist={toggleWishlist}
                 products={bestSelling}
@@ -1764,79 +2368,173 @@ export function StorefrontPage() {
               </section>
             </>
           ) : null}
-          {hasFooterContent ? <footer className="storefront-footer">
-            <section className="storefront-footer-brand">
-              <NodicsBrand logoText={headerLogoText} subtitle={headerSubtitle} />
-              {homeContent.footer.summary ? <p>{homeContent.footer.summary}</p> : null}
-              {homeContent.footer.contactEmail ? <a href={`mailto:${homeContent.footer.contactEmail}`}>{homeContent.footer.contactEmail}</a> : null}
-            </section>
-            {homeContent.footer.groups.map((group) => (
-              <section className="storefront-footer-links" key={group.title}>
-                <h3>{group.title}</h3>
-                {group.links.map((link) => <span className="footer-link" key={link}>{link}</span>)}
-              </section>
-            ))}
-            {homeContent.footer.newsletter ? <section className="storefront-footer-newsletter">
-              {homeContent.footer.newsletter.title ? <h3>{homeContent.footer.newsletter.title}</h3> : null}
-              {homeContent.footer.newsletter.text ? <p>{homeContent.footer.newsletter.text}</p> : null}
-              <form onSubmit={(event) => event.preventDefault()}>
-                <input aria-label="Newsletter email" placeholder={homeContent.footer.newsletter?.placeholder} />
-                <button type="submit">{homeContent.footer.newsletter?.buttonLabel}</button>
-              </form>
-            </section> : null}
-            <section className="storefront-footer-legal">
-              {homeContent.footer.copyright ? <span>{homeContent.footer.copyright}</span> : null}
-              {homeContent.footer.brandLabel ? <span>{homeContent.footer.brandLabel}</span> : null}
-              {homeContent.footer.legalLinks.map((link) => <span key={link}>{link}</span>)}
-            </section>
-          </footer> : null}
+          {renderStorefrontFooter()}
         </>
-      ) : (
+      ) : view === 'collections' ? (
         <>
-          <section className="plp-toolbar">
-            <div>
-              <p className="eyebrow">Product Listing</p>
-              <h2>{collections.find((collection) => collection.code === collectionCode)?.label ?? 'Collection'}</h2>
+          <section className="collection-index-hero">
+            <div className="collection-index-copy">
+              {collectionIndexContent?.eyebrow ? <p className="eyebrow">{collectionIndexContent.eyebrow}</p> : null}
+              <h1>{collectionIndexContent?.heading ?? homeContent.collectionHeader?.heading ?? 'Shop by collection'}</h1>
+              <p>{collectionIndexContent?.summary ?? 'Explore curated category, brand, and seasonal edits. Each collection opens a Commerce-powered product listing with live filters, sort options, prices, media, and availability.'}</p>
+              <div className="collection-index-actions" aria-label="Collection page actions">
+                {renderActionButton(collectionIndexContent?.primaryAction)}
+                {renderActionButton(collectionIndexContent?.secondaryAction)}
+              </div>
             </div>
-            <div className="chip-row" aria-label="Collection filters">
-              {collections.map((collection) => (
-                <button className={collection.code === collectionCode ? '' : 'secondary'} key={collection.code} onClick={() => setCollectionCode(collection.code)} type="button">{collection.label}</button>
-              ))}
-            </div>
-            <div className="chip-row" aria-label="Brand filters">
-              <button className={brand ? 'secondary' : ''} onClick={() => setBrand('')} type="button">All brands</button>
-              {brands.map((nextBrand) => (
-                <button className={brand === nextBrand ? '' : 'secondary'} key={nextBrand} onClick={() => setBrand(nextBrand)} type="button">{nextBrand}</button>
-              ))}
-            </div>
-            {facetEntries.length ? (
-              <div className="facet-panel" aria-label="Search facets">
-                {facetEntries.map(([facetCode, values]) => (
-                  <article key={facetCode}>
-                    <h3>{facetCode}</h3>
-                    <p>{values.map((value) => facetLabel(value)).join(', ')}</p>
-                  </article>
-                ))}
+            {collectionIndexContent?.heroMedia?.image ? (
+              <div className="collection-index-hero-media">
+                <img alt={collectionIndexContent.heroMedia.alt ?? ''} src={collectionIndexContent.heroMedia.image} />
+                <span>{collections.length} curated paths</span>
               </div>
             ) : null}
-            <label>
-              Sort products
-              <select aria-label="Sort products" onChange={(event) => setSortCode(event.target.value)} value={sortCode}>
-                <option value="recommended">Recommended</option>
-                <option value="name-asc">Name A-Z</option>
-                <option value="price-asc">Price low to high</option>
-                <option value="price-desc">Price high to low</option>
-              </select>
-            </label>
           </section>
-          <section className="grid" aria-label="Product listing">
+          {collectionIndexContent?.highlights?.length ? (
+            <section className="collection-index-highlights" aria-label="Collection shopping benefits">
+              {collectionIndexContent.highlights.map((highlight) => (
+                <article key={`${highlight.label ?? ''}-${highlight.title}`}>
+                  {highlight.label ? <span>{highlight.label}</span> : null}
+                  <strong>{highlight.title}</strong>
+                  {highlight.text ? <p>{highlight.text}</p> : null}
+                </article>
+              ))}
+            </section>
+          ) : null}
+          <section className="collection-index-grid" aria-label="Available collections">
+            {collections.map((collection) => (
+              <button key={collection.code} onClick={() => openCollectionTile(collection)} type="button">
+                <span className="collection-index-media">
+                  {collection.image ? <img alt={collection.alt ?? ''} src={collection.image} /> : null}
+                </span>
+                <span className="collection-index-meta">
+                  {collection.itemCount ? <small>{collection.itemCount}</small> : null}
+                  <strong>{collection.label}</strong>
+                  {collection.summary ? <em>{collection.summary}</em> : null}
+                  <span className="collection-index-card-link">
+                    Explore edit
+                    <ArrowUpRight aria-hidden="true" size={16} strokeWidth={2.4} />
+                  </span>
+                </span>
+              </button>
+            ))}
+          </section>
+          {collectionIndexContent?.footerNote ? (
+            <section className="collection-index-note" aria-label="Collection search note">
+              <p>{collectionIndexContent.footerNote}</p>
+            </section>
+          ) : null}
+          {renderStorefrontFooter()}
+        </>
+      ) : view === 'plp' ? (
+        <>
+          <section className={productListingHeroHasMedia ? 'plp-hero has-media' : 'plp-hero'}>
+            <div className="plp-hero-copy">
+              <p className="eyebrow">{productListingContent?.eyebrow ?? listingEyebrow}</p>
+              <h1>{listingHeading}</h1>
+              <p>{listingSummary}</p>
+              {(productListingContent?.primaryAction || productListingContent?.secondaryAction) ? (
+                <div className="plp-hero-actions">
+                  {productListingContent.primaryAction ? (
+                    <button className="primary" onClick={() => openAction(productListingContent.primaryAction)} type="button">
+                      {productListingContent.primaryAction.label}
+                    </button>
+                  ) : null}
+                  {renderActionButton(productListingContent?.secondaryAction)}
+                </div>
+              ) : null}
+            </div>
+            {productListingHeroMedia?.image ? (
+              <div className="plp-hero-media">
+                <img
+                  alt={productListingHeroMedia.alt ?? ''}
+                  data-fallback-src={productListingHeroMedia.mediaCode === PRODUCT_LISTING_DEFAULT_HERO_MEDIA_CODE ? PRODUCT_LISTING_DEFAULT_HERO_FALLBACK_SRC : undefined}
+                  onError={(event) => {
+                    const fallbackSrc = event.currentTarget.dataset.fallbackSrc;
+                    if (fallbackSrc && !event.currentTarget.src.endsWith(fallbackSrc)) event.currentTarget.src = fallbackSrc;
+                  }}
+                  src={productListingHeroMedia.image}
+                />
+                {productListingHeroSupportingMedia.length ? (
+                  <div className="plp-hero-supporting-media" aria-hidden="true">
+                    {productListingHeroSupportingMedia.slice(0, 3).map((item) => (
+                      <span key={item.mediaCode ?? item.image} className="plp-hero-supporting-image">
+                        <img alt="" src={item.image} />
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+          {projectedListingProducts.length && productListingContent?.projectedProducts?.heading ? (
+            <section className="plp-projected-products" aria-label={productListingContent.projectedProducts.ariaLabel ?? productListingContent.projectedProducts.heading}>
+              <div className="plp-projected-header">
+                <div>
+                  {productListingContent.projectedProducts.eyebrow ? <p className="eyebrow">{productListingContent.projectedProducts.eyebrow}</p> : null}
+                  <h2>{productListingContent.projectedProducts.heading}</h2>
+                  {productListingContent.projectedProducts.summary ? <p>{productListingContent.projectedProducts.summary}</p> : null}
+                </div>
+              </div>
+              <ProductCarousel
+                ariaLabel={productListingContent.projectedProducts.ariaLabel ?? productListingContent.projectedProducts.heading}
+                compareProductCodes={compareProductCodes}
+                direction={productListingContent.projectedProducts.direction}
+                labels={storefrontLabels}
+                onAdd={addToCart}
+                onCompare={toggleCompare}
+                onOpen={openProduct}
+                onQuickAdd={openQuickAdd}
+                onQuickView={openQuickView}
+                onWishlist={toggleWishlist}
+                products={projectedListingProducts}
+                wishlistProductCodes={wishlistProductCodes}
+              />
+            </section>
+          ) : null}
+          <ProductListingToolbar
+            activeFilterCount={activeFilterCount}
+            activeFilterLabels={activeFilterLabels}
+            configuration={productListingContent}
+            filters={selectedFilters}
+            layout={listingLayout}
+            onClearFilters={clearProductFilters}
+            onLayoutChange={setListingLayout}
+            onSaleOnlyChange={(selectedValue) => updateProductFilter('saleOnly', selectedValue)}
+            onSortChange={(nextSortCode) => {
+              setListingPage(1);
+              setSortCode(nextSortCode);
+            }}
+            onToggleFilters={() => setFiltersOpen((current) => !current)}
+            searchFacetsLabel="Search facets"
+            searchFacetsText={searchFacetsText}
+            sortCode={sortCode}
+          />
+          <ProductFilterDrawer
+            configuration={productListingContent}
+            filterGroups={listingFilterGroups}
+            filters={effectiveSelectedFilters}
+            isOpen={filtersOpen}
+            onApply={() => setFiltersOpen(false)}
+            onClear={clearProductFilters}
+            onClose={() => setFiltersOpen(false)}
+            onFilterToggle={(key, value) => {
+              if (key === 'brands') setBrand('');
+              toggleProductFilter(key, value);
+            }}
+            onPriceChange={(key, value) => updateProductFilter(key, value)}
+            optionCount={filterOptionCount}
+            optionLabel={filterOptionLabel}
+          />
+          <section className={listingLayout === 'list' ? 'grid product-listing-grid is-list-view' : 'grid product-listing-grid'} data-layout={listingLayout} aria-label="Product listing">
             {visibleProducts.map((product) => (
               <ProductCardView
                 compareSelected={compareProductCodes.includes(product.productCode)}
                 key={product.productCode}
+                labels={storefrontLabels}
                 onAdd={addToCart}
                 onCompare={toggleCompare}
                 onOpen={openProduct}
+                onQuickAdd={openQuickAdd}
                 onQuickView={openQuickView}
                 onWishlist={toggleWishlist}
                 product={product}
@@ -1854,32 +2552,175 @@ export function StorefrontPage() {
               <button onClick={() => openCollection(rootCollectionCode)} type="button">Browse available products</button>
             </section>
           ) : (
-            <div className="load-more">
-              <button className="secondary" onClick={() => setVisiblePageSize((current) => current + 12)} type="button">Load more products</button>
-            </div>
+            <nav className="plp-pagination" aria-label="Product listing pagination">
+              <p>{canShowNextListingPage || canShowPreviousListingPage ? listingCountText : completeStatusLabel}</p>
+              <div className="plp-pagination-controls">
+                <button
+                  className="plp-pagination-step"
+                  disabled={!canShowPreviousListingPage}
+                  onClick={() => setListingPage((current) => Math.max(1, current - 1))}
+                  type="button"
+                >
+                  Previous
+                </button>
+                {listingPaginationPages.map((pageNumber, index) => (
+                  <span className="plp-pagination-page-wrap" key={pageNumber}>
+                    {index > 0 && pageNumber - (listingPaginationPages[index - 1] ?? pageNumber) > 1 ? (
+                      <span className="plp-pagination-ellipsis" aria-hidden="true">…</span>
+                    ) : null}
+                    <button
+                      aria-current={pageNumber === listingPage ? 'page' : undefined}
+                      className={pageNumber === listingPage ? 'plp-pagination-page is-active' : 'plp-pagination-page'}
+                      onClick={() => setListingPage(pageNumber)}
+                      type="button"
+                    >
+                      {pageNumber}
+                    </button>
+                  </span>
+                ))}
+                <button
+                  className="plp-pagination-step"
+                  disabled={!canShowNextListingPage}
+                  onClick={() => setListingPage((current) => current + 1)}
+                  type="button"
+                >
+                  Next
+                </button>
+              </div>
+            </nav>
           )}
+          {renderStorefrontFooter()}
         </>
-      )}
-      {quickView ? (
-        <dialog className="quick-view" open>
-          <article>
-            <button className="secondary close" onClick={() => setQuickView(undefined)} type="button">Close</button>
-            <p className="eyebrow">Quick View</p>
-            <h2>{quickView.name}</h2>
-            <p>{quickView.summary}</p>
-            <p className="price">{quickView.price?.currency} {quickView.price?.unitAmount}</p>
-            <div className="quick-view-actions">
-              <button onClick={() => addToCart(quickView)} type="button">Quick Add</button>
-              <button className="secondary" onClick={() => toggleWishlist(quickView)} type="button">
-                {wishlistProductCodes.includes(quickView.productCode) ? 'Wishlisted' : 'Wishlist'}
-              </button>
-              <button className="secondary" onClick={() => toggleCompare(quickView)} type="button">
-                {compareProductCodes.includes(quickView.productCode) ? 'Comparing' : 'Compare'}
-              </button>
-              <button className="secondary" onClick={() => openProduct(quickView.productCode)} type="button">View full details</button>
+      ) : null}
+      {quickAdd ? createPortal(
+        <div
+          className="quick-add-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setQuickAdd(undefined);
+          }}
+          role="presentation"
+        >
+          <section aria-label={`${quickAddLabel} ${quickAdd.name ?? quickAdd.productCode}`} aria-modal="true" className="quick-add-modal" role="dialog">
+            <button aria-label={closeQuickAddLabel} className="quick-add-close" onClick={() => setQuickAdd(undefined)} type="button">×</button>
+            <div className="quick-add-summary">
+              <div className="quick-add-thumb">
+                {quickAddImage ? <img alt={quickAdd.name ?? quickAdd.productCode} src={quickAddImage} /> : <ProductMediaPlaceholder product={quickAdd} />}
+              </div>
+              <div>
+                <h2>{quickAdd.name}</h2>
+                <p className="quick-add-price">{quickAddPrice}</p>
+              </div>
             </div>
-          </article>
-        </dialog>
+            {quickAddColorOptions.length ? (
+              <section className="quick-add-option-group">
+                <p>{colorsLabel}: <strong>{quickAddColorOptions.find((option) => option.code === quickAddColourCode)?.label ?? quickAddColorOptions[0]?.label}</strong></p>
+                <div className="quick-add-color-options" aria-label={availableColorsLabel}>
+                  {quickAddColorOptions.map((option) => (
+                    <button
+                      aria-label={`${selectColorPrefix} ${option.label}`}
+                      aria-pressed={quickAddColourCode === option.code}
+                      className={quickAddColourCode === option.code ? 'is-selected' : undefined}
+                      key={option.code}
+                      onClick={() => selectQuickAddColour(option.code)}
+                      style={{ '--swatch-color': option.value } as CSSProperties}
+                      type="button"
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
+            {quickAddSizeOptions.length ? (
+              <section className="quick-add-option-group">
+                <p>{sizeLabel}: <strong>{quickAddSizeCode ?? quickAddSizeOptions[0]}</strong></p>
+                <div className="quick-add-size-options" aria-label={availableSizesLabel}>
+                  {quickAddSizeOptions.map((size) => (
+                    <button aria-pressed={quickAddSizeCode === size} className={quickAddSizeCode === size ? 'is-selected' : undefined} key={size} onClick={() => selectQuickAddSize(size)} type="button">{size}</button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+            <section className="quick-add-option-group">
+              <p>{quantityLabel}:</p>
+              <div className="quick-add-quantity" aria-label={quantityLabel}>
+                <button aria-label={decreaseQuantityLabel} onClick={() => setQuickAddQuantity((current) => Math.max(1, current - 1))} type="button">−</button>
+                <span>{quickAddQuantity}</span>
+                <button aria-label={increaseQuantityLabel} onClick={() => setQuickAddQuantity((current) => current + 1)} type="button">+</button>
+              </div>
+            </section>
+            <div className="quick-add-actions">
+              <button className="quick-add-cart" onClick={() => addQuickAddToCart(false)} type="button">{addToCartLabel} - {quickAddPrice}</button>
+              <button aria-label={compareProductCodes.includes(quickAdd.productCode) ? removeFromCompareLabel : compareLabel} className={compareProductCodes.includes(quickAdd.productCode) ? 'quick-add-icon is-selected' : 'quick-add-icon'} onClick={() => toggleCompare(quickAdd)} type="button">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 4v12m0 0 3-3m-3 3-3-3m13 7V8m0 0 3 3m-3-3-3 3M5 4h4M15 20h4" /></svg>
+              </button>
+              <button aria-label={wishlistProductCodes.includes(quickAdd.productCode) ? removeFromWishlistLabel : addToWishlistLabel} className={wishlistProductCodes.includes(quickAdd.productCode) ? 'quick-add-icon is-selected' : 'quick-add-icon'} onClick={() => toggleWishlist(quickAdd)} type="button">
+                <Heart aria-hidden="true" size={26} strokeWidth={1.8} />
+              </button>
+            </div>
+            <button className="quick-add-buy" onClick={() => addQuickAddToCart(true)} type="button">{buyNowLabel}</button>
+          </section>
+        </div>,
+        document.body,
+      ) : null}
+      {quickView ? createPortal(
+        <div
+          className="quick-view-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setQuickView(undefined);
+          }}
+          role="presentation"
+        >
+          <section aria-label={`${quickViewTitleLabel} ${quickView.name ?? quickView.productCode}`} aria-modal="true" className="quick-view-modal" role="dialog">
+            <button aria-label={closeQuickViewLabel} className="quick-add-close" onClick={() => setQuickView(undefined)} type="button">×</button>
+            <div className="quick-view-media">
+              {quickViewImage ? <img alt={quickView.name ?? quickView.productCode} src={quickViewImage} /> : <ProductMediaPlaceholder product={quickView} />}
+            </div>
+            <div className="quick-view-content">
+              <p className="eyebrow">{quickViewTitleLabel}</p>
+              <h2>{quickView.name}</h2>
+              <p>{quickView.summary}</p>
+              <p className="quick-add-price">{quickViewPrice}</p>
+              {quickViewColorOptions.length ? (
+                <section className="quick-add-option-group">
+                  <p>{colorsLabel}: <strong>{quickViewColorOptions.find((option) => option.code === quickViewColourCode)?.label ?? quickViewColorOptions[0]?.label}</strong></p>
+                  <div className="quick-add-color-options" aria-label={availableColorsLabel}>
+                    {quickViewColorOptions.map((option) => (
+                      <button
+                        aria-label={`${selectColorPrefix} ${option.label}`}
+                        aria-pressed={quickViewColourCode === option.code}
+                        className={quickViewColourCode === option.code ? 'is-selected' : undefined}
+                        key={option.code}
+                        onClick={() => selectQuickViewColour(option.code)}
+                        style={{ '--swatch-color': option.value } as CSSProperties}
+                        type="button"
+                      />
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+              {quickViewSizeOptions.length ? (
+                <section className="quick-add-option-group">
+                  <p>{sizeLabel}: <strong>{quickViewSizeCode ?? quickViewSizeOptions[0]}</strong></p>
+                  <div className="quick-add-size-options" aria-label={availableSizesLabel}>
+                    {quickViewSizeOptions.map((size) => (
+                      <button aria-pressed={quickViewSizeCode === size} className={quickViewSizeCode === size ? 'is-selected' : undefined} key={size} onClick={() => selectQuickViewSize(size)} type="button">{size}</button>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+              <div className="quick-view-actions">
+                <button className="quick-add-cart" onClick={() => addToCart(quickView, 1, quickViewSelection.variantCode)} type="button">{addToCartLabel} - {quickViewPrice}</button>
+                <button aria-label={compareProductCodes.includes(quickView.productCode) ? removeFromCompareLabel : compareLabel} className={compareProductCodes.includes(quickView.productCode) ? 'quick-add-icon is-selected' : 'quick-add-icon'} onClick={() => toggleCompare(quickView)} type="button">
+                  <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 4v12m0 0 3-3m-3 3-3-3m13 7V8m0 0 3 3m-3-3-3 3M5 4h4M15 20h4" /></svg>
+                </button>
+                <button aria-label={wishlistProductCodes.includes(quickView.productCode) ? removeFromWishlistLabel : addToWishlistLabel} className={wishlistProductCodes.includes(quickView.productCode) ? 'quick-add-icon is-selected' : 'quick-add-icon'} onClick={() => toggleWishlist(quickView)} type="button">
+                  <Heart aria-hidden="true" size={26} strokeWidth={1.8} />
+                </button>
+              </div>
+              <button className="secondary quick-view-details" onClick={() => openProduct(quickView.productCode)} type="button">{storefrontLabels.viewFullDetails ?? 'View full details'}</button>
+            </div>
+          </section>
+        </div>,
+        document.body,
       ) : null}
     </main>
   );

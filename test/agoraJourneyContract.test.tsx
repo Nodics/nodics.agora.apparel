@@ -65,6 +65,31 @@ function agoraCmsPageResponse() {
               cartPreviewEnabled: true,
               accountPreviewEnabled: true,
               wishlistPreviewEnabled: true,
+              storefrontLabels: {
+                quickAdd: "Quick Add",
+                quickView: "Quick view",
+                addToCart: "Add to cart",
+                buyNow: "Buy it now",
+                wishlist: "Wishlist",
+                wishlisted: "Wishlisted",
+                addToWishlist: "Add to wishlist",
+                removeFromWishlist: "Remove from wishlist",
+                compare: "Compare",
+                comparing: "Comparing",
+                removeFromCompare: "Remove from compare",
+                colors: "Colors",
+                size: "Size",
+                quantity: "Quantity",
+                availableColors: "Available colors",
+                availableSizes: "Available sizes",
+                selectColorPrefix: "Select",
+                closeQuickAdd: "Close quick add",
+                decreaseQuantity: "Decrease quantity",
+                increaseQuantity: "Increase quantity",
+                viewDetailsPrefix: "View details for",
+                featuredProductsAriaLabel: "Featured products",
+                bestSellingProductsAriaLabel: "Best selling products",
+              },
               utilityLinks: [
                 { label: "+1 315-666-6688", path: "tel:+13156666688" },
                 { label: "support@nodics.com", path: "mailto:support@nodics.com" },
@@ -147,6 +172,107 @@ function agoraCmsPageResponse() {
             2,
           ),
           cmsComponent(
+            "agoraApparelCollectionIndexExperience",
+            "agora.collectionIndex",
+            {
+              eyebrow: "Curated Apparel Edits",
+              heading: "Collections you might like",
+              summary: "Choose a category, brand-inspired edit, or seasonal collection.",
+              primaryAction: { label: "Shop all products", path: "/shop" },
+              secondaryAction: { label: "Start from featured edit", collectionCode: "agoraWomen" },
+              heroMediaCode: "agora-home-hero-layered-edit",
+              highlights: [
+                {
+                  label: "For shoppers",
+                  title: "Start with intent",
+                  text: "Browse by newness, clothing, dresses, bags, or accessory edits.",
+                },
+              ],
+              footerNote: "Every edit resolves into indexed Commerce products.",
+            },
+            3,
+          ),
+          cmsComponent(
+            "agoraApparelProductListingExperience",
+            "agora.productListing",
+            {
+              eyebrow: "Shop the edit",
+              heading: "Apparel selected for now",
+              summary:
+                "A merchandised listing experience that blends editorial content with live Commerce discovery.",
+              heroMediaCode: "agora-home-hero-signature-style",
+              heroSupportingMedia: [
+                { mediaCode: "agora-product-double-button-trench", position: 20 },
+                { mediaCode: "agora-product-soft-shoulder-bag", position: 30 },
+              ],
+              primaryAction: {
+                label: "Shop new arrivals",
+                collectionCode: "agoraWomen",
+              },
+              secondaryAction: {
+                label: "Explore collections",
+                path: "/collections",
+              },
+              resultLabel: "products",
+              loadMoreLabel: "Load 10 more products",
+              completeStatusLabel: "All matching products are visible",
+              projectedProducts: {
+                eyebrow: "Featured by Agora",
+                heading: "Pieces to project this week",
+                summary: "A business-curated carousel for campaign products.",
+                ariaLabel: "Business projected products",
+                direction: "forward",
+                pageSize: 4,
+                productCodes: ["agoraLinenWrapDress", "agoraLeatherTote"],
+              },
+              toolbar: {
+                ariaLabel: "Product listing controls",
+                filterLabel: "Refine",
+                saleOnlyLabel: "Sale edits only",
+                sortLabel: "Arrange:",
+                sortAriaLabel: "Arrange products",
+                layoutAriaLabel: "Listing density",
+                activeFiltersAriaLabel: "Selected refinements",
+                clearAllLabel: "Reset all",
+                layoutOptions: [
+                  { code: "list", label: "List view" },
+                  { code: "grid-2", label: "Two products per row" },
+                  { code: "grid-3", label: "Three products per row" },
+                  { code: "grid-4", label: "Four products per row" },
+                  { code: "grid-5", label: "Five products per row" },
+                ],
+                sortOptions: [
+                  { code: "recommended", label: "Best selling" },
+                  { code: "name-asc", label: "Name A-Z" },
+                  { code: "price-asc", label: "Price low to high" },
+                  { code: "price-desc", label: "Price high to low" },
+                ],
+              },
+              filterDrawer: {
+                ariaLabel: "Product refinements",
+                title: "Refine products",
+                closeLabel: "Close refinements",
+                resetLabel: "Reset refinements",
+                applyLabel: "Apply refinements",
+                priceLabel: "Price",
+                minPriceLabel: "Min",
+                maxPriceLabel: "Max",
+                minPricePlaceholder: "0",
+                maxPricePlaceholder: "250",
+                groups: [
+                  { code: "categories", label: "Product Categories" },
+                  { code: "price", label: "Price" },
+                  { code: "sizes", label: "Size" },
+                  { code: "colors", label: "Color" },
+                  { code: "brands", label: "Brand" },
+                  { code: "collections", label: "Collection" },
+                  { code: "availability", label: "Availability" },
+                ],
+              },
+            },
+            4,
+          ),
+          cmsComponent(
             "agoraHomeCollectionGrid",
             "agora.collectionGrid",
             {
@@ -176,7 +302,7 @@ function agoraCmsPageResponse() {
                 },
               ],
             },
-            3,
+            5,
           ),
           cmsComponent(
             "agoraTopPicksProductRail",
@@ -186,7 +312,7 @@ function agoraCmsPageResponse() {
               heading: "Fresh styles just in",
               pageSize: 4,
             },
-            4,
+            6,
           ),
           cmsComponent(
             "agoraEditorialPromoGrid",
@@ -204,7 +330,7 @@ function agoraCmsPageResponse() {
                 },
               ],
             },
-            5,
+            7,
           ),
           cmsComponent(
             "agoraSpecialOfferSplit",
@@ -220,7 +346,7 @@ function agoraCmsPageResponse() {
                 collectionCode: "agoraWomenSale",
               },
             },
-            6,
+            8,
           ),
           cmsComponent(
             "agoraBestSellingProductRail",
@@ -230,7 +356,7 @@ function agoraCmsPageResponse() {
               heading: "Browse our top trending",
               pageSize: 4,
             },
-            7,
+            8,
           ),
           cmsComponent(
             "agoraCustomerServicePromiseGrid",
@@ -373,6 +499,157 @@ describe("Agora storefront journey", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     window.localStorage.clear();
+    window.history.pushState({}, "", "/");
+  });
+
+  it("routes from home to collection index and then into a search-backed collection listing", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const target = String(input);
+      if (isCmsPageRequest(input)) return agoraCmsPageResponse();
+      return jsonResponse({
+        data: {
+          products: [
+            {
+              productCode: "agoraLinenWrapDress",
+              name: "Linen Wrap Dress",
+              summary: "Linen dress",
+              brand: "Nodics Atelier",
+              price: { currency: "USD", unitAmount: "129" },
+              availability: { available: true, status: "IN_STOCK" },
+              variantCodes: linenWrapDressApparel.options.map((option) => option.variantCode),
+              defaultVariantCode: "agoraLinenWrapDressIvoryS",
+              apparel: linenWrapDressApparel,
+            },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<StorefrontPage />);
+    await waitFor(() => expect(screen.getAllByText("Linen Wrap Dress").length).toBeGreaterThan(0));
+    await user.click(screen.getByRole("button", { name: "View All Collection" }));
+
+    expect(window.location.pathname).toBe("/collections");
+    await screen.findByRole("region", { name: "Available collections" });
+    expect(screen.getByText("Start with intent")).toBeTruthy();
+    expect(screen.getByText("Every edit resolves into indexed Commerce products.")).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([target]) => new URL(String(target)).searchParams.get("path") === "/collections")).toBe(true);
+
+    const collectionIndex = screen.getByRole("region", { name: "Available collections" });
+    await user.click(within(collectionIndex).getByRole("button", { name: /New in/i }));
+
+    expect(window.location.pathname).toBe("/shop");
+    expect(window.location.search).toContain("collection=agoraNewArrivals");
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([target]) => {
+        const url = new URL(String(target));
+        return url.pathname.includes("/customer/products/discovery") &&
+          url.searchParams.get("collectionCode") === "agoraNewArrivals";
+      })).toBe(true);
+    });
+  });
+
+  it("opens reference-style quick add and adds the selected apparel variant", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const target = String(input);
+        if (isCmsPageRequest(input)) return agoraCmsPageResponse();
+        if (target.includes("/customer/products/agoraLinenWrapDress")) {
+          return jsonResponse({
+            data: {
+              product: {
+                productCode: "agoraLinenWrapDress",
+                name: "Linen Wrap Dress",
+                description: "Linen dress",
+                variantCodes: linenWrapDressApparel.options.map((option) => option.variantCode),
+                defaultVariantCode: "agoraLinenWrapDressIvoryS",
+                price: { currency: "USD", unitAmount: "129" },
+                availability: { available: true, status: "IN_STOCK" },
+                apparel: linenWrapDressApparel,
+              },
+            },
+          });
+        }
+        return jsonResponse({
+          data: {
+            products: [
+              {
+                productCode: "agoraLinenWrapDress",
+                name: "Linen Wrap Dress",
+                summary: "Linen dress",
+                brand: "Nodics Atelier",
+                price: { currency: "USD", unitAmount: "129" },
+                availability: { available: true, status: "IN_STOCK" },
+                variantCodes: linenWrapDressApparel.options.map((option) => option.variantCode),
+                defaultVariantCode: "agoraLinenWrapDressIvoryS",
+                apparel: linenWrapDressApparel,
+              },
+            ],
+          },
+        });
+      }),
+    );
+
+    render(<StorefrontPage />);
+    await waitFor(() => expect(screen.getAllByText("Linen Wrap Dress").length).toBeGreaterThan(0));
+    await user.click(screen.getAllByRole("button", { name: /Quick Add Linen Wrap Dress/i })[0]);
+
+    const quickAddDialog = await screen.findByRole("dialog", { name: /Quick add Linen Wrap Dress/i });
+    await user.click(within(quickAddDialog).getByRole("button", { name: "Select Black" }));
+    await user.click(within(quickAddDialog).getByRole("button", { name: "M" }));
+    await user.click(within(quickAddDialog).getByRole("button", { name: "Increase quantity" }));
+    await user.click(within(quickAddDialog).getByRole("button", { name: /Add to cart - USD 129/i }));
+    await user.click(screen.getByRole("button", { name: /Cart \(2\)/ }));
+
+    expect(screen.getByText("Variant: agoraLinenWrapDressBlackM")).toBeTruthy();
+    expect(screen.getByText("Quantity: 2")).toBeTruthy();
+  });
+
+  it("renders product interaction labels from the published header component", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (isCmsPageRequest(input)) {
+          const response = await agoraCmsPageResponse();
+          const payload = await response.json();
+          const header = payload.result.page.components.find((item: { renderer: string }) => item.renderer === "agora.header");
+          header.properties.storefrontLabels.quickAdd = "Choose options";
+          header.properties.storefrontLabels.addToCart = "Add selected style";
+          header.properties.storefrontLabels.buyNow = "Buy selected style";
+          return jsonResponse(payload);
+        }
+        return jsonResponse({
+          data: {
+            products: [
+              {
+                productCode: "agoraLinenWrapDress",
+                name: "Linen Wrap Dress",
+                summary: "Linen dress",
+                brand: "Nodics Atelier",
+                price: { currency: "USD", unitAmount: "129" },
+                availability: { available: true, status: "IN_STOCK" },
+                variantCodes: linenWrapDressApparel.options.map((option) => option.variantCode),
+                defaultVariantCode: "agoraLinenWrapDressIvoryS",
+                apparel: linenWrapDressApparel,
+              },
+            ],
+          },
+        });
+      }),
+    );
+
+    render(<StorefrontPage />);
+    await waitFor(() => expect(screen.getAllByText("Linen Wrap Dress").length).toBeGreaterThan(0));
+    await user.click(screen.getAllByRole("button", { name: /Choose options Linen Wrap Dress/i })[0]);
+
+    const quickAddDialog = await screen.findByRole("dialog", { name: /Choose options Linen Wrap Dress/i });
+    expect(within(quickAddDialog).getByRole("button", { name: /Add selected style - USD 129/i })).toBeTruthy();
+    expect(within(quickAddDialog).getByRole("button", { name: "Buy selected style" })).toBeTruthy();
   });
 
   it("renders Home to PLP to PDP to authenticated checkout against backend API contracts", async () => {
@@ -686,6 +963,7 @@ describe("Agora storefront journey", () => {
                 brand: ["Nodics Atelier", "Agora Studio"],
                 collection: ["agoraWomen", "agoraWomenAccessories"],
               },
+              total: 20,
             },
           }),
           { status: 200, headers: { "content-type": "application/json" } },
@@ -734,24 +1012,45 @@ describe("Agora storefront journey", () => {
         }),
       ).toBeTruthy(),
     );
+    expect(screen.getByText(/Shop the edit/i)).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: /Pieces to project this week/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getAllByLabelText("Business projected products").length,
+    ).toBeGreaterThan(0);
+    await user.click(screen.getByRole("button", { name: "Refine" }));
+    expect(screen.getByRole("dialog", { name: "Product refinements" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Refine products" })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Agora Studio" }));
+    await user.click(screen.getByRole("button", { name: "Apply refinements" }));
     expect(screen.getAllByText("Leather Tote").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Search facets")).toBeTruthy();
     await user.selectOptions(
-      screen.getByLabelText("Sort products"),
+      screen.getByLabelText("Arrange products"),
       "price-desc",
     );
+    expect(screen.getAllByText(/Showing \d+-\d+ of 20 products/u).length).toBeGreaterThan(0);
     await user.click(
-      screen.getByRole("button", { name: "Load more products" }),
+      screen.getByRole("button", { name: "2" }),
     );
+    expect(screen.getByRole("button", { name: "2" }).getAttribute("aria-current")).toBe("page");
     await user.click(screen.getAllByRole("button", { name: /Quick view/i })[0]);
     expect(
       screen.getAllByRole("heading", { name: "Leather Tote" }).length,
     ).toBeGreaterThan(1);
     await user.click(screen.getByRole("button", { name: "Close" }));
-    await user.click(screen.getByRole("button", { name: /Nodics Atelier/i }));
+    await user.click(screen.getByRole("button", { name: "Reset all" }));
+    await waitFor(() =>
+      expect(screen.getAllByText("Linen Wrap Dress").length).toBeGreaterThan(0),
+    );
+    const productListingGrid = within(
+      screen.getByRole("region", { name: "Product listing" }),
+    );
     await user.click(
-      screen.getByRole("button", { name: "View details for Linen Wrap Dress" }),
+      productListingGrid.getByRole("button", {
+        name: "View details for Linen Wrap Dress",
+      }),
     );
     await waitFor(() =>
       expect(

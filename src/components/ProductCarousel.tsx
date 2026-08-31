@@ -3,15 +3,17 @@ import useEmblaCarousel from 'embla-carousel-react';
 import { useMemo } from 'react';
 
 import type { ProductCard } from '../api/commerceClient';
-import { ProductCardView } from './ProductCardView';
+import { ProductCardView, type ProductActionLabels } from './ProductCardView';
 
 export interface ProductCarouselProps {
   readonly ariaLabel: string;
   readonly compareProductCodes: readonly string[];
   readonly direction?: 'forward' | 'backward';
-  readonly onAdd: (product: ProductCard) => void;
+  readonly labels?: ProductActionLabels;
+  readonly onAdd: (product: ProductCard, quantity?: number, variantCode?: string) => void;
   readonly onCompare: (product: ProductCard) => void;
   readonly onOpen: (productCode: string) => void;
+  readonly onQuickAdd: (product: ProductCard, variantCode?: string) => void;
   readonly onQuickView: (product: ProductCard) => void;
   readonly onWishlist: (product: ProductCard) => void;
   readonly products: readonly ProductCard[];
@@ -22,9 +24,11 @@ export function ProductCarousel({
   ariaLabel,
   compareProductCodes,
   direction = 'forward',
+  labels,
   onAdd,
   onCompare,
   onOpen,
+  onQuickAdd,
   onQuickView,
   onWishlist,
   products,
@@ -36,9 +40,11 @@ export function ProductCarousel({
       <ProductCarouselStatic
         ariaLabel={ariaLabel}
         compareProductCodes={compareProductCodes}
+        labels={labels}
         onAdd={onAdd}
         onCompare={onCompare}
         onOpen={onOpen}
+        onQuickAdd={onQuickAdd}
         onQuickView={onQuickView}
         onWishlist={onWishlist}
         products={products}
@@ -51,9 +57,11 @@ export function ProductCarousel({
       ariaLabel={ariaLabel}
       compareProductCodes={compareProductCodes}
       direction={direction}
+      labels={labels}
       onAdd={onAdd}
       onCompare={onCompare}
       onOpen={onOpen}
+      onQuickAdd={onQuickAdd}
       onQuickView={onQuickView}
       onWishlist={onWishlist}
       products={products}
@@ -66,9 +74,11 @@ function ProductCarouselEmbla({
   ariaLabel,
   compareProductCodes,
   direction = 'forward',
+  labels,
   onAdd,
   onCompare,
   onOpen,
+  onQuickAdd,
   onQuickView,
   onWishlist,
   products,
@@ -101,9 +111,11 @@ function ProductCarouselEmbla({
             <div className="product-carousel-slide" key={product.productCode}>
               <ProductCardView
                 compareSelected={compareProductCodes.includes(product.productCode)}
+                labels={labels}
                 onAdd={onAdd}
                 onCompare={onCompare}
                 onOpen={onOpen}
+                onQuickAdd={onQuickAdd}
                 onQuickView={onQuickView}
                 onWishlist={onWishlist}
                 product={product}
@@ -120,9 +132,11 @@ function ProductCarouselEmbla({
 function ProductCarouselStatic({
   ariaLabel,
   compareProductCodes,
+  labels,
   onAdd,
   onCompare,
   onOpen,
+  onQuickAdd,
   onQuickView,
   onWishlist,
   products,
@@ -136,9 +150,11 @@ function ProductCarouselStatic({
             <div className="product-carousel-slide" key={product.productCode}>
               <ProductCardView
                 compareSelected={compareProductCodes.includes(product.productCode)}
+                labels={labels}
                 onAdd={onAdd}
                 onCompare={onCompare}
                 onOpen={onOpen}
+                onQuickAdd={onQuickAdd}
                 onQuickView={onQuickView}
                 onWishlist={onWishlist}
                 product={product}

@@ -26,6 +26,12 @@ export function productImageUrl(product: ProductCard, mediaBaseUrl?: string): st
   return productVisualUrl(product.media?.primary, mediaBaseUrl);
 }
 
+export function productHoverImageUrl(product: ProductCard, primaryImageUrl?: string, mediaBaseUrl?: string): string | undefined {
+  const secondaryImage = productVisualUrl(product.media?.secondary, mediaBaseUrl);
+  if (secondaryImage && secondaryImage !== primaryImageUrl) return secondaryImage;
+  return productGalleryUrls(product, mediaBaseUrl).find((candidate) => candidate !== primaryImageUrl);
+}
+
 export function productGalleryUrls(product: ProductCard, mediaBaseUrl?: string): readonly string[] {
   const declaredGallery = (product.media?.gallery ?? [])
     .map((item) => productVisualUrl(item, mediaBaseUrl))

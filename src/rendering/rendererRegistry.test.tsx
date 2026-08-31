@@ -6,7 +6,7 @@ import '../composition/apparel';
 import { RendererRegistry } from '../domainCommerceUi';
 import { PRODUCT_CARD_RENDERER, storefrontRendererRegistry } from './storefrontRendererRegistry';
 
-const actions = { onAdd: () => undefined, onCompare: () => undefined, onOpen: () => undefined, onQuickView: () => undefined, onWishlist: () => undefined };
+const actions = { onAdd: () => undefined, onCompare: () => undefined, onOpen: () => undefined, onQuickAdd: () => undefined, onQuickView: () => undefined, onWishlist: () => undefined };
 
 describe('hierarchical storefront renderer registry', () => {
   it('resolves customer over domain over commerce', () => {

@@ -33,6 +33,7 @@ describe('order lifecycle contract', () => {
       siteCode: 'agora',
       channel: 'web',
       storeCode: 'agoraMainStore',
+      domainCode: 'apparel',
       locale: 'en',
       requestTimeoutMs: 1000,
     }, 'customer-token', 'order-1', 'RETURN', {
@@ -85,6 +86,7 @@ describe('order lifecycle contract', () => {
       siteCode: 'agora',
       channel: 'web',
       storeCode: 'agoraMainStore',
+      domainCode: 'apparel',
       locale: 'en',
       requestTimeoutMs: 1000,
     }, 'customer-token', 'order-1', 'EXCHANGE', {

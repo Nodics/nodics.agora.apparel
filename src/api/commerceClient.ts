@@ -27,8 +27,9 @@ export interface ProductCard {
   readonly summary?: string;
   readonly brand?: string;
   readonly localizedAttributes?: Readonly<Record<string, unknown>>;
-  readonly media?: { readonly primary?: MediaDescriptor; readonly gallery?: readonly MediaDescriptor[] };
+  readonly media?: { readonly primary?: MediaDescriptor; readonly secondary?: MediaDescriptor; readonly gallery?: readonly MediaDescriptor[] };
   readonly categoryCodes?: readonly string[];
+  readonly collectionCodes?: readonly string[];
   readonly variantCodes?: readonly string[];
   readonly defaultVariantCode?: string;
   readonly price?: { readonly currency?: string; readonly unitAmount?: string };
@@ -59,6 +60,14 @@ export interface ProductDetail extends ProductCard {
 export interface DiscoveryResponse {
   readonly products: readonly ProductCard[];
   readonly facets?: Readonly<Record<string, readonly unknown[]>>;
+  readonly total?: number;
+  readonly totalCount?: number;
+  readonly productCount?: number;
+  readonly pagination?: {
+    readonly total?: number;
+    readonly totalCount?: number;
+    readonly productCount?: number;
+  };
 }
 
 export interface CartEntry {
@@ -300,7 +309,16 @@ async function request<T>(
 
 export function listProducts(
   config: AgoraRuntimeConfig,
-  input: { readonly categoryCode?: string; readonly q?: string; readonly pageSize?: string },
+  input: {
+    readonly brandCode?: string;
+    readonly categoryCode?: string;
+    readonly collectionCode?: string;
+    readonly domainCode?: string;
+    readonly q?: string;
+    readonly sortCode?: string;
+    readonly page?: string;
+    readonly pageSize?: string;
+  },
 ) {
   return request<DiscoveryResponse>(
     config,
@@ -309,9 +327,14 @@ export function listProducts(
     {
       storeCode: config.storeCode,
       locale: config.locale,
+      brandCode: input.brandCode,
       categoryCode: input.categoryCode,
+      collectionCode: input.collectionCode,
+      domainCode: input.domainCode,
       q: input.q,
-      pageSize: input.pageSize ?? '12',
+      sortCode: input.sortCode,
+      page: input.page,
+      pageSize: input.pageSize ?? '10',
     },
   );
 }
