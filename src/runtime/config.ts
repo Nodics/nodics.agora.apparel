@@ -1,5 +1,6 @@
 export interface AgoraRuntimeConfig {
   readonly cmsBaseUrl: string;
+  readonly wcmsExperienceBaseUrl?: string;
   readonly mediaBaseUrl: string;
   readonly axisBaseUrl?: string;
   readonly profileBaseUrl: string;
@@ -22,6 +23,7 @@ const localStorefrontOrigin = typeof window !== 'undefined' && window.location?.
 
 export const runtimeConfig: AgoraRuntimeConfig = Object.freeze({
   cmsBaseUrl: import.meta.env.VITE_STOREFRONT_CMS_BASE_URL ?? 'http://localhost:4314',
+  wcmsExperienceBaseUrl: import.meta.env.VITE_STOREFRONT_WCMS_EXPERIENCE_BASE_URL ?? import.meta.env.VITE_STOREFRONT_CMS_BASE_URL ?? 'http://localhost:4314',
   mediaBaseUrl: import.meta.env.VITE_STOREFRONT_MEDIA_BASE_URL ?? 'http://localhost:4314',
   axisBaseUrl: import.meta.env.VITE_STOREFRONT_AXIS_BASE_URL ?? 'http://localhost:3100',
   profileBaseUrl: import.meta.env.VITE_STOREFRONT_PROFILE_BASE_URL ?? 'http://localhost:4300',

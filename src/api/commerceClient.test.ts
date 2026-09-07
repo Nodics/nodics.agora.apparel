@@ -2,21 +2,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   addCartEntry,
-  addCustomerListEntry,
+  addShoppingListEntry,
   applyPromotion,
   calculateCart,
   commerceUrl,
   createCart,
   getProduct,
   listCustomerOrders,
+  listDigitalEntitlements,
   listProducts,
   listReturnMethods,
   listShippingMethods,
   placeCheckout,
   previewPromotion,
   readCustomerOrder,
-  readCustomerList,
-  removeCustomerListEntry,
+  readShoppingList,
+  revealDigitalEntitlement,
+  removeShoppingListEntry,
   type CheckoutPlacementRequest,
 } from './commerceClient';
 import { runtimeConfig, type AgoraRuntimeConfig } from '../runtime/config';
@@ -67,7 +69,7 @@ describe('commerceClient', () => {
   });
 
   it('builds customer discovery URLs with Store, locale, category, and query context', () => {
-    const target = commerceUrl(config, '/nodics/product/v0/customer/products/discovery', {
+    const target = commerceUrl(config, '/nodics/product/v0/products/discovery', {
       storeCode: config.storeCode,
       locale: config.locale,
       categoryCode: 'agoraWomen',
@@ -78,7 +80,7 @@ describe('commerceClient', () => {
     });
 
     expect(target.origin).toBe('http://localhost:4350');
-    expect(target.pathname).toBe('/nodics/product/v0/customer/products/discovery');
+    expect(target.pathname).toBe('/nodics/product/v0/products/discovery');
     expect(target.searchParams.get('storeCode')).toBe('agoraMainStore');
     expect(target.searchParams.get('locale')).toBe('en');
     expect(target.searchParams.get('categoryCode')).toBe('agoraWomen');
@@ -94,7 +96,7 @@ describe('commerceClient', () => {
     const request = lastRequest();
 
     expect(response.products[0]?.productCode).toBe('agoraLinenWrapDress');
-    expect(request.target).toContain('http://localhost:4350/nodics/product/v0/customer/products/discovery');
+    expect(request.target).toContain('http://localhost:4350/nodics/product/v0/products/discovery');
     expect(request.target).toContain('storeCode=agoraMainStore');
     expect(request.target).toContain('page=3');
     expect(request.target).toContain('pageSize=4');
@@ -111,7 +113,7 @@ describe('commerceClient', () => {
     const response = await getProduct(config, 'agoraOxfordShirt');
 
     expect(response.product.productCode).toBe('agoraOxfordShirt');
-    expect(lastRequest().target).toContain('/nodics/product/v0/customer/products/agoraOxfordShirt?');
+    expect(lastRequest().target).toContain('/nodics/product/v0/products/agoraOxfordShirt?');
   });
 
   it('creates and updates customer carts with bearer customer context', async () => {
@@ -132,12 +134,12 @@ describe('commerceClient', () => {
       variantCode: 'agoraLinenWrapDressNaturalS',
       quantity: '3',
     });
-    expect(lastRequest().target).toContain('/nodics/cart/v0/customer/carts/cart-1/entries');
+    expect(lastRequest().target).toContain('/nodics/cart/v0/carts/cart-1/entries');
     expect(lastRequest().options.headers).toMatchObject({ authorization: 'Bearer customer-token' });
     expect(JSON.parse(String(lastRequest().options.body))).toMatchObject({ quantity: '3' });
 
     await calculateCart(config, 'customer-token', 'cart-1', '2');
-    expect(lastRequest().target).toContain('/nodics/cart/v0/customer/carts/cart-1/calculations');
+    expect(lastRequest().target).toContain('/nodics/cart/v0/carts/cart-1/calculations');
     expect(JSON.parse(String(lastRequest().options.body))).toMatchObject({ expectedRevision: '2' });
   });
 
@@ -147,23 +149,23 @@ describe('commerceClient', () => {
       .mockResolvedValueOnce(jsonResponse({ data: { list: { code: 'wishlist-1', listType: 'WISHLIST', ownerId: 'customer-1', status: 'ACTIVE' }, entries: [{ code: 'entry-1', productCode: 'agoraLinenWrapDress', status: 'ACTIVE' }] } }))
       .mockResolvedValueOnce(jsonResponse({ data: { list: { code: 'wishlist-1', listType: 'WISHLIST', ownerId: 'customer-1', status: 'ACTIVE' }, entries: [] } }));
 
-    await readCustomerList(config, 'customer-token', 'WISHLIST');
-    expect(lastRequest().target).toBe('http://localhost:4350/nodics/customerList/v0/customer/lists/WISHLIST?storeCode=agoraMainStore&locale=en');
+    await readShoppingList(config, 'customer-token', 'WISHLIST');
+    expect(lastRequest().target).toBe('http://localhost:4350/nodics/shoppingList/v0/lists/WISHLIST?storeCode=agoraMainStore&locale=en');
     expect(lastRequest().options.headers).toMatchObject({ authorization: 'Bearer customer-token' });
 
-    await addCustomerListEntry(config, 'customer-token', 'WISHLIST', {
+    await addShoppingListEntry(config, 'customer-token', 'WISHLIST', {
       productCode: 'agoraLinenWrapDress',
       variantCode: 'agoraLinenWrapDressNaturalS',
     });
-    expect(lastRequest().target).toContain('/nodics/customerList/v0/customer/lists/WISHLIST/entries');
+    expect(lastRequest().target).toContain('/nodics/shoppingList/v0/lists/WISHLIST/entries');
     expect(JSON.parse(String(lastRequest().options.body))).toMatchObject({
       productCode: 'agoraLinenWrapDress',
       storeCode: 'agoraMainStore',
       locale: 'en',
     });
 
-    await removeCustomerListEntry(config, 'customer-token', 'WISHLIST', 'entry-1');
-    expect(lastRequest().target).toBe('http://localhost:4350/nodics/customerList/v0/customer/lists/WISHLIST/entries/entry-1?storeCode=agoraMainStore&locale=en');
+    await removeShoppingListEntry(config, 'customer-token', 'WISHLIST', 'entry-1');
+    expect(lastRequest().target).toBe('http://localhost:4350/nodics/shoppingList/v0/lists/WISHLIST/entries/entry-1?storeCode=agoraMainStore&locale=en');
   });
 
   it('previews and applies promotions through bearer customer context', async () => {
@@ -177,7 +179,7 @@ describe('commerceClient', () => {
       productCodes: ['agoraLinenWrapDress'],
       currency: 'USD',
     });
-    expect(lastRequest().target).toBe('http://localhost:4350/nodics/promotion/v0/customer/promotions/preview');
+    expect(lastRequest().target).toBe('http://localhost:4350/nodics/promotion/v0/promotions/preview');
     expect(lastRequest().options.headers).toMatchObject({ authorization: 'Bearer customer-token' });
 
     await applyPromotion(config, 'customer-token', {
@@ -187,7 +189,7 @@ describe('commerceClient', () => {
       currency: 'USD',
       idempotencyKey: 'promo-idem-1',
     });
-    expect(lastRequest().target).toBe('http://localhost:4350/nodics/promotion/v0/customer/promotions/apply');
+    expect(lastRequest().target).toBe('http://localhost:4350/nodics/promotion/v0/promotions/apply');
     expect(JSON.parse(String(lastRequest().options.body))).toMatchObject({
       idempotencyKey: 'promo-idem-1',
       subtotal: '129.00',
@@ -211,7 +213,7 @@ describe('commerceClient', () => {
     const response = await placeCheckout(config, 'customer-token', payload, 'checkout-idem-1');
 
     expect(response.orderCode).toBe('order-1');
-    expect(lastRequest().target).toBe('http://localhost:4350/nodics/checkoutCore/v0/customer/checkouts/place');
+    expect(lastRequest().target).toBe('http://localhost:4350/nodics/checkoutCore/v0/checkouts/place');
     expect(lastRequest().options.headers).toMatchObject({
       authorization: 'Bearer customer-token',
       'idempotency-key': 'checkout-idem-1',
@@ -228,7 +230,7 @@ describe('commerceClient', () => {
     const response = await listShippingMethods(config);
 
     expect(response.methods[0]?.code).toBe('EXPRESS');
-    expect(lastRequest().target).toBe('http://localhost:4350/nodics/fulfillmentCore/v0/customer/shipping/methods');
+    expect(lastRequest().target).toBe('http://localhost:4350/nodics/fulfillmentCore/v0/shipping/methods');
   });
 
   it('reads Fulfillment-owned customer return methods from Commerce Online', async () => {
@@ -237,7 +239,7 @@ describe('commerceClient', () => {
     const response = await listReturnMethods(config);
 
     expect(response.methods[0]?.code).toBe('DROP_OFF');
-    expect(lastRequest().target).toBe('http://localhost:4350/nodics/fulfillmentCore/v0/customer/returns/methods');
+    expect(lastRequest().target).toBe('http://localhost:4350/nodics/fulfillmentCore/v0/returns/methods');
   });
 
   it('reads customer-owned order detail with bearer context', async () => {
@@ -246,7 +248,7 @@ describe('commerceClient', () => {
     const response = await readCustomerOrder(config, 'customer-token', 'order-1');
 
     expect(response.order.code).toBe('order-1');
-    expect(lastRequest().target).toBe('http://localhost:4350/nodics/order/v0/customer/orders/order-1');
+    expect(lastRequest().target).toBe('http://localhost:4350/nodics/order/v0/orders/order-1');
     expect(lastRequest().options.headers).toMatchObject({ authorization: 'Bearer customer-token' });
   });
 
@@ -256,8 +258,24 @@ describe('commerceClient', () => {
     const response = await listCustomerOrders(config, 'customer-token');
 
     expect(response[0]?.code).toBe('order-1');
-    expect(lastRequest().target).toBe('http://localhost:4350/nodics/order/v0/customer/orders');
+    expect(lastRequest().target).toBe('http://localhost:4350/nodics/order/v0/orders');
     expect(lastRequest().options.headers).toMatchObject({ authorization: 'Bearer customer-token' });
+  });
+
+  it('lists and reveals customer-owned digital coupon entitlements with bearer context', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse({ data: { entitlements: [{ code: 'entitlement-1', productCode: 'agoraStylePass5Coupon', status: 'ACTIVE', claimStatus: 'UNCLAIMED', providerCode: 'coupon-row-1' }] } }))
+      .mockResolvedValueOnce(jsonResponse({ data: { entitlementCode: 'entitlement-1', couponCode: 'coupon-row-1', status: 'REVEALED', token: 'AGORA5-0001' } }));
+
+    const wallet = await listDigitalEntitlements(config, 'customer-token');
+    expect(wallet.entitlements[0]?.productCode).toBe('agoraStylePass5Coupon');
+    expect(lastRequest().target).toBe('http://localhost:4350/nodics/digitalCore/v0/entitlements');
+    expect(lastRequest().options.headers).toMatchObject({ authorization: 'Bearer customer-token' });
+
+    const reveal = await revealDigitalEntitlement(config, 'customer-token', 'entitlement-1');
+    expect(reveal.token).toBe('AGORA5-0001');
+    expect(lastRequest().target).toBe('http://localhost:4350/nodics/digitalCore/v0/entitlements/entitlement-1/reveal');
+    expect(lastRequest().options.method).toBe('POST');
   });
 
   it('surfaces Nodics error messages from failed API responses', async () => {

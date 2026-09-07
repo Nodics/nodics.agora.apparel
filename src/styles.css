@@ -3449,7 +3449,7 @@ select {
     transform 180ms ease,
     visibility 180ms ease;
   visibility: hidden;
-  z-index: 5;
+  z-index: 12;
 }
 
 .quick-icon-actions button {
@@ -3519,7 +3519,7 @@ select {
     visibility 180ms ease;
   visibility: hidden;
   width: calc(100% - 3rem);
-  z-index: 5;
+  z-index: 12;
 }
 
 .quick-add-button:hover,
@@ -4622,7 +4622,7 @@ select {
   transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease, background-color 160ms ease, color 160ms ease;
   visibility: hidden;
   width: calc(100% - 1.8rem);
-  z-index: 5;
+  z-index: 12;
 }
 
 .product-card:hover .quick-icon-actions,
@@ -6387,12 +6387,12 @@ body,
   box-shadow: 0 1.35rem 4.5rem rgba(7, 10, 11, 0.3);
   color: #211f1a;
   display: grid;
-  gap: 1.05rem;
-  max-height: min(88vh, 720px);
+  gap: 0.78rem;
+  max-height: min(86vh, 660px);
   overflow-y: auto;
-  padding: clamp(1.15rem, 2.6vw, 1.65rem);
+  padding: clamp(1rem, 2.2vw, 1.35rem);
   position: relative;
-  width: min(92vw, 560px);
+  width: min(92vw, 520px);
 }
 
 .quick-add-close {
@@ -6405,7 +6405,7 @@ body,
   display: inline-flex;
   font-size: 2.1rem;
   font-weight: 260;
-  height: 3.05rem;
+  height: 2.7rem;
   justify-content: center;
   line-height: 1;
   padding: 0 0 0.14rem;
@@ -6413,7 +6413,7 @@ body,
   right: 1.35rem;
   top: 1.35rem;
   transition: background-color 160ms ease, transform 160ms ease;
-  width: 3.05rem;
+  width: 2.7rem;
 }
 
 .quick-add-close:hover,
@@ -6425,9 +6425,9 @@ body,
 .quick-add-summary {
   align-items: center;
   display: grid;
-  gap: 1.2rem;
-  grid-template-columns: 5.9rem minmax(0, 1fr);
-  padding-right: 3.75rem;
+  gap: 1rem;
+  grid-template-columns: 5.25rem minmax(0, 1fr);
+  padding-right: 3.35rem;
 }
 
 .quick-add-thumb {
@@ -6446,7 +6446,7 @@ body,
 }
 
 .quick-add-summary h2 {
-  font-size: clamp(1.22rem, 2.4vw, 1.55rem);
+  font-size: clamp(1.15rem, 2.1vw, 1.42rem);
   font-weight: 520;
   line-height: 1.16;
   margin: 0 0 0.45rem;
@@ -6454,7 +6454,7 @@ body,
 
 .quick-add-price {
   color: #111;
-  font-size: clamp(1.65rem, 3.4vw, 2.25rem);
+  font-size: clamp(1.45rem, 3vw, 1.95rem);
   font-weight: 720;
   line-height: 1;
   margin: 0;
@@ -6462,11 +6462,11 @@ body,
 
 .quick-add-option-group {
   display: grid;
-  gap: 0.62rem;
+  gap: 0.48rem;
 }
 
 .quick-add-option-group p {
-  font-size: 1.02rem;
+  font-size: 0.98rem;
   margin: 0;
 }
 
@@ -6480,7 +6480,7 @@ body,
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.78rem;
+  gap: 0.62rem;
 }
 
 .quick-add-color-options button {
@@ -6489,11 +6489,11 @@ body,
   border-radius: 999px;
   box-shadow: 0 0 0 1px transparent;
   cursor: pointer;
-  height: 2.35rem;
-  min-height: 2.35rem;
+  height: 2rem;
+  min-height: 2rem;
   padding: 0;
   transition: box-shadow 160ms ease, transform 160ms ease;
-  width: 2.35rem;
+  width: 2rem;
 }
 
 .quick-add-color-options button:hover,
@@ -6511,14 +6511,14 @@ body,
   color: #211f1a;
   cursor: pointer;
   display: inline-flex;
-  font-size: 1rem;
+  font-size: 0.94rem;
   font-weight: 640;
-  height: 3rem;
+  height: 2.65rem;
   justify-content: center;
-  min-height: 3rem;
+  min-height: 2.65rem;
   padding: 0;
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
-  width: 3rem;
+  width: 2.65rem;
 }
 
 .quick-add-size-options button:hover,
@@ -6536,8 +6536,8 @@ body,
   border-radius: 999px;
   display: inline-flex;
   justify-content: space-between;
-  max-width: 10.8rem;
-  min-height: 3rem;
+  max-width: 9.8rem;
+  min-height: 2.7rem;
   overflow: hidden;
 }
 
@@ -6546,11 +6546,11 @@ body,
   border: 0;
   color: #211f1a;
   cursor: pointer;
-  font-size: 1.65rem;
+  font-size: 1.45rem;
   font-weight: 620;
-  height: 3rem;
-  min-height: 3rem;
-  width: 3.55rem;
+  height: 2.7rem;
+  min-height: 2.7rem;
+  width: 3.15rem;
 }
 
 .quick-add-quantity span {
@@ -6574,7 +6574,7 @@ body,
   font-size: 0.78rem;
   font-weight: 760;
   letter-spacing: 0.08em;
-  min-height: 3.3rem;
+  min-height: 2.95rem;
   text-transform: uppercase;
   transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
@@ -6609,12 +6609,12 @@ body,
   color: #211f1a;
   cursor: pointer;
   display: inline-flex;
-  height: 3.3rem;
+  height: 2.95rem;
   justify-content: center;
-  min-height: 3.3rem;
+  min-height: 2.95rem;
   padding: 0;
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
-  width: 3.3rem;
+  width: 2.95rem;
 }
 
 .quick-add-icon svg {
@@ -8060,4 +8060,118 @@ body,
   .collection-index-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/*
+ * Final retail header fit pass.
+ * Keeps the CMS-driven mega-menu labels visible while preventing the navigation
+ * row from colliding with the search/account/wishlist/cart actions on laptop
+ * and browser-test widths.
+ */
+.storefront-header {
+  column-gap: clamp(1rem, 1.8vw, 1.75rem);
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+}
+
+.storefront-header .agora-brand-lockup {
+  gap: 0.68rem;
+}
+
+.storefront-header .agora-brand-mark {
+  height: 42px;
+  width: 42px;
+}
+
+.storefront-header .agora-brand-text strong {
+  font-size: clamp(1rem, 1.1vw, 1.12rem);
+  letter-spacing: 0.12em;
+}
+
+.storefront-header .agora-brand-text small {
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+}
+
+.storefront-header .nav-pills {
+  gap: clamp(0.82rem, 1.22vw, 1.35rem);
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding-inline: 0.15rem;
+  scrollbar-width: none;
+}
+
+.storefront-header .nav-pills::-webkit-scrollbar {
+  display: none;
+}
+
+.storefront-header .nav-pills button {
+  flex: 0 0 auto;
+  font-size: clamp(0.88rem, 1vw, 1rem);
+  gap: 0.18rem;
+}
+
+.storefront-header .nav-pills .nav-badge {
+  font-size: 0.52rem;
+  padding: 0.16rem 0.34rem;
+}
+
+.storefront-header .commerce-actions {
+  gap: clamp(0.62rem, 1vw, 0.95rem);
+  min-width: max-content;
+}
+
+.storefront-header .commerce-actions .icon-action {
+  min-height: 2.35rem;
+  min-width: 2.1rem;
+}
+
+@media (max-width: 1120px) {
+  .storefront-header {
+    grid-template-columns: max-content max-content;
+  }
+}
+
+.digital-wallet {
+  align-items: stretch;
+}
+
+.wallet-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  width: min(100%, 76rem);
+}
+
+.wallet-card {
+  align-items: stretch;
+  display: grid;
+  gap: 1rem;
+}
+
+.wallet-card h3 {
+  font-size: 1.08rem;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.coupon-token {
+  align-items: center;
+  background: #f6f8f4;
+  border: 1px solid rgba(20, 35, 25, 0.14);
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 0.85rem;
+}
+
+.coupon-token span {
+  color: #17231d;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
 }

@@ -92,25 +92,32 @@ export interface CartCalculationResponse extends CartResponse {
   readonly taxAmount?: string;
   readonly totalAmount?: string;
   readonly currency?: string;
+  readonly decisions?: {
+    readonly discount?: {
+      readonly promotionCode?: string;
+      readonly discountAmount?: string;
+      readonly reasonCode?: string;
+    };
+  };
 }
 
-export type CustomerListType = 'WISHLIST' | 'COMPARE';
+export type ShoppingListType = 'WISHLIST' | 'COMPARE' | 'SAVE_FOR_LATER';
 
-export interface CustomerListEntry {
+export interface ShoppingListEntry {
   readonly code: string;
   readonly productCode: string;
   readonly variantCode?: string;
   readonly status: string;
 }
 
-export interface CustomerListResponse {
+export interface ShoppingListResponse {
   readonly list: {
     readonly code: string;
-    readonly listType: CustomerListType;
+    readonly listType: ShoppingListType;
     readonly ownerId: string;
     readonly status: string;
   };
-  readonly entries: readonly CustomerListEntry[];
+  readonly entries: readonly ShoppingListEntry[];
 }
 
 export interface PromotionDecision {
@@ -200,6 +207,7 @@ export interface CheckoutPlacementRequest {
   readonly orderCode: string;
   readonly expectedCartRevision?: string;
   readonly calculationCode?: string;
+  readonly couponCode?: string;
   readonly providerToken: string;
   readonly customer: {
     readonly email: string;
@@ -245,6 +253,40 @@ export interface CustomerOrderDetailResponse {
   readonly order: CustomerOrderSummary;
   readonly entries?: readonly CartEntry[];
   readonly lifecycle?: readonly OrderLifecycleResponse[];
+}
+
+export interface DigitalEntitlementSummary {
+  readonly code: string;
+  readonly enterpriseCode?: string;
+  readonly ownerId?: string;
+  readonly orderCode?: string;
+  readonly orderEntryCode?: string;
+  readonly cartCode?: string;
+  readonly productCode: string;
+  readonly sku?: string;
+  readonly status: string;
+  readonly digitalDeliveryType?: string;
+  readonly providerOwner?: string;
+  readonly providerCode?: string;
+  readonly claimStatus?: string;
+  readonly purchasedAt?: string;
+  readonly deliveredAt?: string;
+  readonly revokedAt?: string;
+  readonly evidence?: Readonly<Record<string, unknown>>;
+}
+
+export interface DigitalEntitlementResponse {
+  readonly entitlements: readonly DigitalEntitlementSummary[];
+}
+
+export interface DigitalRevealResponse {
+  readonly entitlementCode?: string;
+  readonly couponCode?: string;
+  readonly providerCode?: string;
+  readonly status: string;
+  readonly token?: string;
+  readonly tokenAvailable?: boolean;
+  readonly reasonCode?: string;
 }
 
 interface Envelope<T> {
@@ -322,7 +364,7 @@ export function listProducts(
 ) {
   return request<DiscoveryResponse>(
     config,
-    '/nodics/product/v0/customer/products/discovery',
+    '/nodics/product/v0/products/discovery',
     {},
     {
       storeCode: config.storeCode,
@@ -342,7 +384,7 @@ export function listProducts(
 export function getProduct(config: AgoraRuntimeConfig, productCode: string) {
   return request<{ readonly product: ProductDetail; readonly relatedProducts?: readonly ProductCard[] }>(
     config,
-    `/nodics/product/v0/customer/products/${encodeURIComponent(productCode)}`,
+    `/nodics/product/v0/products/${encodeURIComponent(productCode)}`,
     {},
     { storeCode: config.storeCode, locale: config.locale },
   );
@@ -351,7 +393,7 @@ export function getProduct(config: AgoraRuntimeConfig, productCode: string) {
 export function createCart(config: AgoraRuntimeConfig, accessToken: string) {
   return request<CartResponse>(
     config,
-    '/nodics/cart/v0/customer/carts',
+    '/nodics/cart/v0/carts',
     {
       method: 'POST',
       headers: { authorization: `Bearer ${accessToken}` },
@@ -363,7 +405,7 @@ export function createCart(config: AgoraRuntimeConfig, accessToken: string) {
 export function readCart(config: AgoraRuntimeConfig, accessToken: string, cartCode: string) {
   return request<CartResponse>(
     config,
-    `/nodics/cart/v0/customer/carts/${encodeURIComponent(cartCode)}`,
+    `/nodics/cart/v0/carts/${encodeURIComponent(cartCode)}`,
     { headers: { authorization: `Bearer ${accessToken}` } },
   );
 }
@@ -376,7 +418,7 @@ export function addCartEntry(
 ) {
   return request<CartResponse>(
     config,
-    `/nodics/cart/v0/customer/carts/${encodeURIComponent(cartCode)}/entries`,
+    `/nodics/cart/v0/carts/${encodeURIComponent(cartCode)}/entries`,
     {
       method: 'POST',
       headers: { authorization: `Bearer ${accessToken}` },
@@ -394,7 +436,7 @@ export function updateCartEntry(
 ) {
   return request<CartResponse>(
     config,
-    `/nodics/cart/v0/customer/carts/${encodeURIComponent(cartCode)}/entries/${encodeURIComponent(entryCode)}`,
+    `/nodics/cart/v0/carts/${encodeURIComponent(cartCode)}/entries/${encodeURIComponent(entryCode)}`,
     {
       method: 'PATCH',
       headers: { authorization: `Bearer ${accessToken}` },
@@ -411,7 +453,7 @@ export function removeCartEntry(
 ) {
   return request<CartResponse>(
     config,
-    `/nodics/cart/v0/customer/carts/${encodeURIComponent(cartCode)}/entries/${encodeURIComponent(entryCode)}`,
+    `/nodics/cart/v0/carts/${encodeURIComponent(cartCode)}/entries/${encodeURIComponent(entryCode)}`,
     {
       method: 'DELETE',
       headers: { authorization: `Bearer ${accessToken}` },
@@ -419,36 +461,36 @@ export function removeCartEntry(
   );
 }
 
-export function calculateCart(config: AgoraRuntimeConfig, accessToken: string, cartCode: string, expectedRevision?: string) {
+export function calculateCart(config: AgoraRuntimeConfig, accessToken: string, cartCode: string, expectedRevision?: string, couponCode?: string) {
   return request<CartCalculationResponse>(
     config,
-    `/nodics/cart/v0/customer/carts/${encodeURIComponent(cartCode)}/calculations`,
+    `/nodics/cart/v0/carts/${encodeURIComponent(cartCode)}/calculations`,
     {
       method: 'POST',
       headers: { authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ expectedRevision }),
+      body: JSON.stringify({ expectedRevision, ...(couponCode ? { couponCode } : {}) }),
     },
   );
 }
 
-export function readCustomerList(config: AgoraRuntimeConfig, accessToken: string, listType: CustomerListType) {
-  return request<CustomerListResponse>(
+export function readShoppingList(config: AgoraRuntimeConfig, accessToken: string, listType: ShoppingListType) {
+  return request<ShoppingListResponse>(
     config,
-    `/nodics/customerList/v0/customer/lists/${encodeURIComponent(listType)}`,
+    `/nodics/shoppingList/v0/lists/${encodeURIComponent(listType)}`,
     { headers: { authorization: `Bearer ${accessToken}` } },
     { storeCode: config.storeCode, locale: config.locale },
   );
 }
 
-export function addCustomerListEntry(
+export function addShoppingListEntry(
   config: AgoraRuntimeConfig,
   accessToken: string,
-  listType: CustomerListType,
+  listType: ShoppingListType,
   entry: { readonly productCode: string; readonly variantCode?: string },
 ) {
-  return request<CustomerListResponse>(
+  return request<ShoppingListResponse>(
     config,
-    `/nodics/customerList/v0/customer/lists/${encodeURIComponent(listType)}/entries`,
+    `/nodics/shoppingList/v0/lists/${encodeURIComponent(listType)}/entries`,
     {
       method: 'POST',
       headers: { authorization: `Bearer ${accessToken}` },
@@ -457,15 +499,15 @@ export function addCustomerListEntry(
   );
 }
 
-export function removeCustomerListEntry(
+export function removeShoppingListEntry(
   config: AgoraRuntimeConfig,
   accessToken: string,
-  listType: CustomerListType,
+  listType: ShoppingListType,
   entryCode: string,
 ) {
-  return request<CustomerListResponse>(
+  return request<ShoppingListResponse>(
     config,
-    `/nodics/customerList/v0/customer/lists/${encodeURIComponent(listType)}/entries/${encodeURIComponent(entryCode)}`,
+    `/nodics/shoppingList/v0/lists/${encodeURIComponent(listType)}/entries/${encodeURIComponent(entryCode)}`,
     {
       method: 'DELETE',
       headers: { authorization: `Bearer ${accessToken}` },
@@ -487,7 +529,7 @@ export function previewPromotion(
 ) {
   return request<PromotionPreviewResponse>(
     config,
-    '/nodics/promotion/v0/customer/promotions/preview',
+    '/nodics/promotion/v0/promotions/preview',
     {
       method: 'POST',
       headers: { authorization: `Bearer ${accessToken}` },
@@ -510,7 +552,7 @@ export function applyPromotion(
 ) {
   return request<PromotionPreviewResponse>(
     config,
-    '/nodics/promotion/v0/customer/promotions/apply',
+    '/nodics/promotion/v0/promotions/apply',
     {
       method: 'POST',
       headers: { authorization: `Bearer ${accessToken}` },
@@ -520,11 +562,11 @@ export function applyPromotion(
 }
 
 export function listShippingMethods(config: AgoraRuntimeConfig) {
-  return request<ShippingMethodResponse>(config, '/nodics/fulfillmentCore/v0/customer/shipping/methods');
+  return request<ShippingMethodResponse>(config, '/nodics/fulfillmentCore/v0/shipping/methods');
 }
 
 export function listReturnMethods(config: AgoraRuntimeConfig) {
-  return request<ReturnMethodResponse>(config, '/nodics/fulfillmentCore/v0/customer/returns/methods');
+  return request<ReturnMethodResponse>(config, '/nodics/fulfillmentCore/v0/returns/methods');
 }
 
 export function placeCheckout(
@@ -535,7 +577,7 @@ export function placeCheckout(
 ) {
   return request<CheckoutPlacementResponse>(
     config,
-    '/nodics/checkoutCore/v0/customer/checkouts/place',
+    '/nodics/checkoutCore/v0/checkouts/place',
     {
       method: 'POST',
       headers: {
@@ -550,7 +592,7 @@ export function placeCheckout(
 export function readCustomerOrder(config: AgoraRuntimeConfig, accessToken: string, orderCode: string) {
   return request<CustomerOrderDetailResponse>(
     config,
-    `/nodics/order/v0/customer/orders/${encodeURIComponent(orderCode)}`,
+    `/nodics/order/v0/orders/${encodeURIComponent(orderCode)}`,
     { headers: { authorization: `Bearer ${accessToken}` } },
   );
 }
@@ -558,8 +600,28 @@ export function readCustomerOrder(config: AgoraRuntimeConfig, accessToken: strin
 export function listCustomerOrders(config: AgoraRuntimeConfig, accessToken: string) {
   return request<readonly CustomerOrderSummary[]>(
     config,
-    '/nodics/order/v0/customer/orders',
+    '/nodics/order/v0/orders',
     { headers: { authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function listDigitalEntitlements(config: AgoraRuntimeConfig, accessToken: string) {
+  return request<DigitalEntitlementResponse>(
+    config,
+    '/nodics/digitalCore/v0/entitlements',
+    { headers: { authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function revealDigitalEntitlement(config: AgoraRuntimeConfig, accessToken: string, entitlementCode: string) {
+  return request<DigitalRevealResponse>(
+    config,
+    `/nodics/digitalCore/v0/entitlements/${encodeURIComponent(entitlementCode)}/reveal`,
+    {
+      method: 'POST',
+      headers: { authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({}),
+    },
   );
 }
 
@@ -571,7 +633,7 @@ export function previewOrderLifecycleRequest(
 ) {
   return request<OrderLifecycleResponse>(
     config,
-    `/nodics/order/v0/customer/orders/${encodeURIComponent(orderCode)}/lifecycle/preview`,
+    `/nodics/order/v0/orders/${encodeURIComponent(orderCode)}/lifecycle/preview`,
     {
       method: 'POST',
       headers: { authorization: `Bearer ${accessToken}` },
@@ -589,7 +651,7 @@ export function createOrderLifecycleRequest(
 ) {
   return request<OrderLifecycleResponse>(
     config,
-    `/nodics/order/v0/customer/orders/${encodeURIComponent(orderCode)}/lifecycle`,
+    `/nodics/order/v0/orders/${encodeURIComponent(orderCode)}/lifecycle`,
     {
       method: 'POST',
       headers: { authorization: `Bearer ${accessToken}`, 'idempotency-key': idempotencyKey },
@@ -601,7 +663,7 @@ export function createOrderLifecycleRequest(
 export function listOrderLifecycleRequests(config: AgoraRuntimeConfig, accessToken: string, orderCode: string) {
   return request<readonly OrderLifecycleResponse[]>(
     config,
-    `/nodics/order/v0/customer/orders/${encodeURIComponent(orderCode)}/lifecycle`,
+    `/nodics/order/v0/orders/${encodeURIComponent(orderCode)}/lifecycle`,
     { headers: { authorization: `Bearer ${accessToken}` } },
   );
 }

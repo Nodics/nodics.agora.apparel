@@ -1,4 +1,4 @@
-import type { MouseEvent, ReactNode } from 'react';
+import type { MouseEvent, PointerEvent, ReactNode } from 'react';
 import type { ProductCardViewProps } from '../../components/ProductCardView';
 import { ProductMediaPlaceholder, productHoverImageUrl, productImageUrl } from '../../media/productVisual';
 import { runtimeConfig } from '../../runtime/config';
@@ -44,9 +44,12 @@ export function CommerceProductCardView({
   const image = selectedImageUrl ?? productImageUrl(product, runtimeConfig.mediaBaseUrl);
   const hoverImage = productHoverImageUrl(product, image, runtimeConfig.mediaBaseUrl);
   const brand = productBrandLabel(product);
-  const handleAction = function (event: MouseEvent<HTMLButtonElement>, action: () => void) {
+  const stopProductOpen = function (event: MouseEvent<HTMLButtonElement> | PointerEvent<HTMLButtonElement>) {
     event.preventDefault();
     event.stopPropagation();
+  };
+  const handleAction = function (event: MouseEvent<HTMLButtonElement>, action: () => void) {
+    stopProductOpen(event);
     action();
   };
   return <article className={hoverImage ? 'product-card has-hover-image' : 'product-card'} data-commerce-renderer="product-card">
@@ -60,17 +63,17 @@ export function CommerceProductCardView({
         ) : <ProductMediaPlaceholder product={product} />}
       </button>
       <div className="quick-icon-actions" aria-label={`${product.name ?? product.productCode} quick actions`}>
-        <button aria-label={wishlistSelected ? `${effectiveLabels.removeFromWishlist} ${product.name ?? product.productCode}` : `${effectiveLabels.addToWishlist} ${product.name ?? product.productCode}`} className={wishlistSelected ? 'is-selected' : undefined} onClick={(event) => handleAction(event, () => onWishlist(product))} type="button">
+        <button aria-label={wishlistSelected ? `${effectiveLabels.removeFromWishlist} ${product.name ?? product.productCode}` : `${effectiveLabels.addToWishlist} ${product.name ?? product.productCode}`} className={wishlistSelected ? 'is-selected' : undefined} onClick={(event) => handleAction(event, () => onWishlist(product))} onMouseDown={stopProductOpen} onPointerDown={stopProductOpen} type="button">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 20.3 4.7 13A4.6 4.6 0 0 1 11 6.3l1 1 1-1A4.6 4.6 0 0 1 19.3 13L12 20.3Z" /></svg>
         </button>
-        <button aria-label={compareSelected ? `${effectiveLabels.removeFromCompare} ${product.name ?? product.productCode}` : `${effectiveLabels.compare} ${product.name ?? product.productCode}`} className={compareSelected ? 'is-selected' : undefined} onClick={(event) => handleAction(event, () => onCompare(product))} type="button">
+        <button aria-label={compareSelected ? `${effectiveLabels.removeFromCompare} ${product.name ?? product.productCode}` : `${effectiveLabels.compare} ${product.name ?? product.productCode}`} className={compareSelected ? 'is-selected' : undefined} onClick={(event) => handleAction(event, () => onCompare(product))} onMouseDown={stopProductOpen} onPointerDown={stopProductOpen} type="button">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 4v12m0 0 3-3m-3 3-3-3m13 7V8m0 0 3 3m-3-3-3 3M5 4h4M15 20h4" /></svg>
         </button>
-        <button aria-label={`${effectiveLabels.quickView} ${product.name ?? product.productCode}`} onClick={(event) => handleAction(event, () => onQuickView(product))} type="button">
+        <button aria-label={`${effectiveLabels.quickView} ${product.name ?? product.productCode}`} onClick={(event) => handleAction(event, () => onQuickView(product))} onMouseDown={stopProductOpen} onPointerDown={stopProductOpen} type="button">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><path d="M12 15.2A3.2 3.2 0 1 0 12 8.8a3.2 3.2 0 0 0 0 6.4Z" /></svg>
         </button>
       </div>
-      <button aria-label={`${effectiveLabels.quickAdd} ${product.name ?? product.productCode}`} className="quick-add-button" onClick={(event) => handleAction(event, () => onQuickAdd(product, selectedVariantCode))} type="button">{effectiveLabels.quickAdd}</button>
+      <button aria-label={`${effectiveLabels.quickAdd} ${product.name ?? product.productCode}`} className="quick-add-button" onClick={(event) => handleAction(event, () => onQuickAdd(product, selectedVariantCode))} onMouseDown={stopProductOpen} onPointerDown={stopProductOpen} type="button">{effectiveLabels.quickAdd}</button>
       {domainDetails}
     </div>
     <div className="product-card-content">

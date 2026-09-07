@@ -5,27 +5,29 @@ import { ArrowUpRight, BadgePercent, ChevronDown, ChevronLeft, ChevronRight, Cir
 
 import {
   addCartEntry,
-  addCustomerListEntry,
-  applyPromotion,
+  addShoppingListEntry,
   calculateCart,
   createCart,
   getProduct,
   listCustomerOrders,
+  listDigitalEntitlements,
   listProducts,
   listReturnMethods,
   listShippingMethods,
   placeCheckout,
   previewPromotion,
   readCustomerOrder,
-  readCustomerList,
+  readShoppingList,
+  revealDigitalEntitlement,
   removeCartEntry,
-  removeCustomerListEntry,
+  removeShoppingListEntry,
   updateCartEntry,
   type CartCalculationResponse,
-  type CustomerListEntry,
-  type CustomerListType,
+  type ShoppingListEntry,
+  type ShoppingListType,
   type CustomerOrderDetailResponse,
   type CustomerOrderSummary,
+  type DigitalEntitlementSummary,
   type CheckoutPlacementResponse,
   type ProductCard,
   type ProductDetail,
@@ -47,6 +49,7 @@ import { paymentProviderToken as checkoutPaymentProviderToken, validateCheckoutS
 import { agoraHomeContent, EMPTY_AGORA_HOME_CONTENT, type AgoraCollectionTile, type AgoraLinkAction, type AgoraMediaItem, type AgoraMegaMenu } from '../cms/agoraHomeContent';
 import { resolveCmsPage } from '../cms/cmsClient';
 import type { CmsResolvedPageContract } from '../cms/cmsContract';
+import { resolveWcmsExperience, wcmsExperienceToCmsPage, type WcmsExperienceTargetType } from '../cms/wcmsExperienceClient';
 import { productAvailabilityLabel } from '../commerce/availabilityPresentation';
 import { productBrandLabel } from '../commerce/productPresentation';
 import { ProductCarousel } from '../components/ProductCarousel';
@@ -57,9 +60,10 @@ import { ProductMediaPlaceholder, mediaDeliveryUrl, productGalleryImageUrl, prod
 import { lifecycleAutomationPlan, lifecycleFormGuidance, lifecycleReasonOptions, lifecycleSummary, lifecycleTimeline, lifecycleTrackingSummary, lifecycleTypes, preferredResolutionOptions, previewLifecycleRequest, refundMethodOptions, submitLifecycleRequest } from '../order/orderLifecycle';
 import { runtimeConfig } from '../runtime/config';
 
-type View = 'home' | 'collections' | 'plp' | 'pdp' | 'cart' | 'checkout' | 'payment-result' | 'confirmation' | 'orders';
+type View = 'home' | 'collections' | 'plp' | 'pdp' | 'cart' | 'checkout' | 'payment-result' | 'confirmation' | 'orders' | 'coupons';
 type CheckoutStep = 'customer' | 'shipping' | 'payment' | 'review';
 type ProductSearchContext = 'all' | 'brand' | 'category' | 'collection';
+type StorefrontShoppingListType = Extract<ShoppingListType, 'WISHLIST' | 'COMPARE'>;
 const PRODUCT_LISTING_BATCH_SIZE = 10;
 const PRODUCT_LISTING_DEFAULT_HERO_MEDIA_CODE = 'agora-owned-product-listing-wide-hero';
 const PRODUCT_LISTING_DEFAULT_HERO_FALLBACK_SRC = '/media/agora-owned-product-listing-wide-hero.jpg';
@@ -77,6 +81,7 @@ type RouteState = {
 };
 const orderCode = () => `storefront-order-${Date.now()}`;
 const idempotencyKey = () => `storefront-checkout-${Date.now()}`;
+const checkoutCouponStorageKey = 'nodics.storefront.checkoutCouponCode';
 const EMPTY_PRODUCT_FILTERS: ProductFilterState = Object.freeze({
   availability: [],
   brands: [],
@@ -88,10 +93,43 @@ const EMPTY_PRODUCT_FILTERS: ProductFilterState = Object.freeze({
   saleOnly: false,
   sizes: [],
 });
+const readCheckoutCouponCode = function (): string {
+  if (typeof window === 'undefined') return '';
+  return window.sessionStorage.getItem(checkoutCouponStorageKey) ?? '';
+};
+const saveCheckoutCouponCode = function (couponCode: string): void {
+  if (typeof window === 'undefined') return;
+  const nextCouponCode = couponCode.trim();
+  if (nextCouponCode) {
+    window.sessionStorage.setItem(checkoutCouponStorageKey, nextCouponCode);
+  } else {
+    window.sessionStorage.removeItem(checkoutCouponStorageKey);
+  }
+};
 const cmsPathForView = function (view: View): string {
   if (view === 'collections') return '/collections';
   if (view === 'plp') return '/shop';
   return '/';
+};
+
+const experiencePageTypeForView = function (view: View): string | undefined {
+  if (view === 'collections') return 'COLLECTION_INDEX';
+  if (view === 'plp') return 'PRODUCT_LISTING';
+  return undefined;
+};
+
+const experienceTargetForRoute = function (view: View, searchContext: ProductSearchContext, searchCode: string): { readonly targetType: WcmsExperienceTargetType; readonly targetCode: string } {
+  if (view === 'collections' || searchContext === 'all' || !searchCode.trim()) return { targetType: 'DEFAULT', targetCode: '*' };
+  if (searchContext === 'brand') return { targetType: 'BRAND', targetCode: searchCode };
+  if (searchContext === 'category') return { targetType: 'CATEGORY', targetCode: searchCode };
+  return { targetType: 'COLLECTION', targetCode: searchCode };
+};
+
+const experienceDevice = function (): string {
+  if (typeof window === 'undefined') return 'desktop';
+  if (window.innerWidth < 768) return 'mobile';
+  if (window.innerWidth < 1100) return 'tablet';
+  return 'desktop';
 };
 
 const routeStateFromLocation = function (rootCollectionCode = ''): RouteState {
@@ -105,6 +143,7 @@ const routeStateFromLocation = function (rootCollectionCode = ''): RouteState {
   if (path === '/cart') return { view: 'cart', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query };
   if (path === '/checkout') return { view: 'checkout', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query, checkoutStep: 'customer' };
   if (path === '/orders') return { view: 'orders', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query };
+  if (path === '/coupons') return { view: 'coupons', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query };
   if (path === '/collections') return { view: 'collections', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query };
   if (path === '/shop') {
     if (brand) return { view: 'plp', collectionCode: rootCollectionCode, searchCode: brand, searchContext: 'brand', query };
@@ -155,6 +194,10 @@ const humanizeCodeLabel = function (value: string): string {
     .trim()
     .replace(/\s+/gu, ' ')
     .replace(/\b\w/gu, (letter) => letter.toUpperCase());
+};
+
+const productSlugSearchTerm = function (slug: string): string {
+  return slug.replace(/[-_]+/gu, ' ').trim();
 };
 
 const uniqueSorted = function (values: readonly (string | undefined)[]): readonly string[] {
@@ -284,6 +327,7 @@ export function StorefrontPage() {
   const [facets, setFacets] = useState<Readonly<Record<string, readonly unknown[]>>>({});
   const [selected, setSelected] = useState<ProductDetail>();
   const [pendingProductSlug, setPendingProductSlug] = useState<string | undefined>(initialRouteState.productSlug);
+  const pendingProductSlugLookupRef = useRef<string | undefined>(undefined);
   const [selectedVariantCode, setSelectedVariantCode] = useState<string>();
   const [quickView, setQuickView] = useState<ProductCard>();
   const [quickViewVariantCode, setQuickViewVariantCode] = useState<string>();
@@ -300,6 +344,9 @@ export function StorefrontPage() {
   const [orderHistory, setOrderHistory] = useState<readonly CustomerOrderSummary[]>([]);
   const [selectedOrderCode, setSelectedOrderCode] = useState<string>();
   const [orderHistoryStatus, setOrderHistoryStatus] = useState<string>();
+  const [digitalEntitlements, setDigitalEntitlements] = useState<readonly DigitalEntitlementSummary[]>([]);
+  const [digitalWalletStatus, setDigitalWalletStatus] = useState<string>();
+  const [revealedCouponTokens, setRevealedCouponTokens] = useState<Readonly<Record<string, string>>>({});
   const [shippingMethodOptions, setShippingMethodOptions] = useState<readonly ShippingOption[]>(shippingOptions);
   const [returnMethodOptions, setReturnMethodOptions] = useState<ReturnMethodResponse['methods']>([
     { code: 'PICKUP', label: 'Pickup', promise: 'Carrier pickup after approval' },
@@ -313,7 +360,7 @@ export function StorefrontPage() {
   const [backendCartCalculation, setBackendCartCalculation] = useState<CartCalculationResponse>();
   const [wishlistProductCodes, setWishlistProductCodes] = useState<readonly string[]>([]);
   const [compareProductCodes, setCompareProductCodes] = useState<readonly string[]>([]);
-  const [backendListEntryCodes, setBackendListEntryCodes] = useState<Readonly<Record<CustomerListType, Readonly<Record<string, string>>>>>({ WISHLIST: {}, COMPARE: {} });
+  const [backendListEntryCodes, setBackendListEntryCodes] = useState<Readonly<Record<StorefrontShoppingListType, Readonly<Record<string, string>>>>>({ WISHLIST: {}, COMPARE: {} });
   const [listStatus, setListStatus] = useState<string>();
   const [promotionStatus, setPromotionStatus] = useState<string>();
   const [backendPromotionDiscount, setBackendPromotionDiscount] = useState<number>();
@@ -340,6 +387,7 @@ export function StorefrontPage() {
     paymentMethod: 'CARD',
     cardName: 'Storefront Customer',
     cardLast4: '4242',
+    couponCode: readCheckoutCouponCode(),
   });
   const [lifecycleForm, setLifecycleForm] = useState({
     reasonCode: 'CUSTOMER_CHANGED_MIND',
@@ -354,12 +402,14 @@ export function StorefrontPage() {
   });
   const [error, setError] = useState<string>();
   const [cmsPage, setCmsPage] = useState<CmsResolvedPageContract>();
+  const [cmsExperiencePage, setCmsExperiencePage] = useState<CmsResolvedPageContract>();
   const [cmsStatus, setCmsStatus] = useState<string>();
   const [activeMegaMenuCode, setActiveMegaMenuCode] = useState<string>();
   const cart = useLocalCart();
   const collectionCarouselRef = useRef<HTMLElement>(null);
   const homeContent = useMemo(() => cmsPage ? agoraHomeContent(cmsPage, runtimeConfig) : EMPTY_AGORA_HOME_CONTENT, [cmsPage]);
-  const productListingContent = homeContent.productListing;
+  const experienceContent = useMemo(() => cmsExperiencePage ? agoraHomeContent(cmsExperiencePage, runtimeConfig) : EMPTY_AGORA_HOME_CONTENT, [cmsExperiencePage]);
+  const productListingContent = experienceContent.productListing ?? homeContent.productListing;
   const cmsPath = cmsPathForView(view);
   const headerContent = homeContent.header;
   const activeMegaMenu = useMemo(
@@ -394,6 +444,36 @@ export function StorefrontPage() {
       });
     return () => controller.abort();
   }, [cmsPath]);
+
+  useEffect(() => {
+    const pageType = experiencePageTypeForView(view);
+    if (!pageType) {
+      setCmsExperiencePage(undefined);
+      return undefined;
+    }
+    const controller = new AbortController();
+    const target = experienceTargetForRoute(view, searchContext, searchCode);
+    void resolveWcmsExperience({
+      baseUrl: runtimeConfig.wcmsExperienceBaseUrl ?? runtimeConfig.cmsBaseUrl,
+      enterpriseCode: runtimeConfig.enterpriseCode,
+      site: runtimeConfig.siteCode,
+      pageType,
+      targetType: target.targetType,
+      targetCode: target.targetCode,
+      locale: runtimeConfig.locale,
+      channel: runtimeConfig.channel,
+      device: experienceDevice(),
+      timeoutMs: runtimeConfig.requestTimeoutMs,
+      signal: controller.signal,
+    })
+      .then((result) => {
+        setCmsExperiencePage(wcmsExperienceToCmsPage(result, runtimeConfig, cmsPath));
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCmsExperiencePage(undefined);
+      });
+    return () => controller.abort();
+  }, [cmsPath, searchCode, searchContext, view]);
 
   useEffect(() => {
     if (!rootCollectionCode || collectionCode) return;
@@ -514,9 +594,41 @@ export function StorefrontPage() {
   useEffect(() => {
     if (!pendingProductSlug || selected?.slug === pendingProductSlug) return;
     const candidate = [...products, ...homeProducts].find((product) => product.slug === pendingProductSlug);
-    if (!candidate) return;
-    setPendingProductSlug(undefined);
-    openProduct(candidate.productCode);
+    if (candidate) {
+      setPendingProductSlug(undefined);
+      pendingProductSlugLookupRef.current = undefined;
+      openProduct(candidate.productCode);
+      return;
+    }
+    if (pendingProductSlugLookupRef.current === pendingProductSlug) return;
+    pendingProductSlugLookupRef.current = pendingProductSlug;
+    let active = true;
+    void listProducts(runtimeConfig, {
+      domainCode: runtimeConfig.domainCode,
+      q: productSlugSearchTerm(pendingProductSlug),
+      pageSize: '50',
+    })
+      .then((response) => {
+        if (!active) return;
+        const discovered = response.products.find((product) => product.slug === pendingProductSlug || normalizedText(product.productCode) === normalizedText(pendingProductSlug));
+        if (!discovered) {
+          pendingProductSlugLookupRef.current = undefined;
+          setError('Product link could not be resolved from current discovery index.');
+          return;
+        }
+        setPendingProductSlug(undefined);
+        pendingProductSlugLookupRef.current = undefined;
+        openProduct(discovered.productCode);
+      })
+      .catch((nextError: unknown) => {
+        if (!active) return;
+        pendingProductSlugLookupRef.current = undefined;
+        setError(nextError instanceof Error ? nextError.message : 'Product link could not be resolved');
+      });
+    return () => {
+      active = false;
+      if (pendingProductSlugLookupRef.current === pendingProductSlug) pendingProductSlugLookupRef.current = undefined;
+    };
   }, [homeProducts, pendingProductSlug, products, selected?.slug]);
 
   useEffect(() => {
@@ -728,7 +840,7 @@ export function StorefrontPage() {
       .catch(() => setSyncStatus('Local cart fallback; backend cart unavailable'));
   };
 
-  const mergeCustomerList = (listType: CustomerListType, entries: readonly CustomerListEntry[]) => {
+  const mergeShoppingList = (listType: StorefrontShoppingListType, entries: readonly ShoppingListEntry[]) => {
     const productCodes = entries.map((entry) => entry.productCode);
     const entryCodes = entries.reduce<Record<string, string>>((result, entry) => {
       result[entry.productCode] = entry.code;
@@ -739,22 +851,22 @@ export function StorefrontPage() {
     setBackendListEntryCodes((current) => ({ ...current, [listType]: { ...current[listType], ...entryCodes } }));
   };
 
-  const syncCustomerListsFromBackend = async (session: CustomerSession) => {
+  const syncShoppingListsFromBackend = async (session: CustomerSession) => {
     if (!session.accessToken) return;
     try {
       const [wishlist, compare] = await Promise.all([
-        readCustomerList(runtimeConfig, session.accessToken, 'WISHLIST'),
-        readCustomerList(runtimeConfig, session.accessToken, 'COMPARE'),
+        readShoppingList(runtimeConfig, session.accessToken, 'WISHLIST'),
+        readShoppingList(runtimeConfig, session.accessToken, 'COMPARE'),
       ]);
-      mergeCustomerList('WISHLIST', wishlist.entries);
-      mergeCustomerList('COMPARE', compare.entries);
+      mergeShoppingList('WISHLIST', wishlist.entries);
+      mergeShoppingList('COMPARE', compare.entries);
       setListStatus(`Backend wishlist and compare synced for ${session.email}`);
     } catch {
       setListStatus('Local wishlist and compare fallback; backend lists unavailable');
     }
   };
 
-  const toggleCustomerList = (listType: CustomerListType, product: ProductCard, updateLocal: (current: readonly string[], exists: boolean) => readonly string[], label: string) => {
+  const toggleShoppingList = (listType: StorefrontShoppingListType, product: ProductCard, updateLocal: (current: readonly string[], exists: boolean) => readonly string[], label: string) => {
     const currentCodes = listType === 'WISHLIST' ? wishlistProductCodes : compareProductCodes;
     const exists = currentCodes.includes(product.productCode);
     const nextCodes = updateLocal(currentCodes, exists);
@@ -769,27 +881,27 @@ export function StorefrontPage() {
 
     const backendEntryCode = backendListEntryCodes[listType][product.productCode];
     const backendAction = exists && backendEntryCode
-      ? removeCustomerListEntry(runtimeConfig, customerSession.accessToken, listType, backendEntryCode)
+      ? removeShoppingListEntry(runtimeConfig, customerSession.accessToken, listType, backendEntryCode)
       : !exists
-        ? addCustomerListEntry(runtimeConfig, customerSession.accessToken, listType, { productCode: product.productCode, variantCode: product.defaultVariantCode ?? product.variantCodes?.[0] })
+        ? addShoppingListEntry(runtimeConfig, customerSession.accessToken, listType, { productCode: product.productCode, variantCode: product.defaultVariantCode ?? product.variantCodes?.[0] })
         : Promise.resolve(undefined);
 
     void backendAction
       .then((response) => {
-        if (response) mergeCustomerList(listType, response.entries);
+        if (response) mergeShoppingList(listType, response.entries);
         setListStatus(`${product.name ?? product.productCode} ${exists ? 'removed from' : 'added to'} backend ${label}`);
       })
       .catch(() => setListStatus(localMessage));
   };
 
   const toggleWishlist = (product: ProductCard) => {
-    toggleCustomerList('WISHLIST', product, (current, exists) => {
+    toggleShoppingList('WISHLIST', product, (current, exists) => {
       return exists ? current.filter((code) => code !== product.productCode) : [product.productCode, ...current];
     }, 'wishlist');
   };
 
   const toggleCompare = (product: ProductCard) => {
-    toggleCustomerList('COMPARE', product, (current, exists) => {
+    toggleShoppingList('COMPARE', product, (current, exists) => {
       return exists ? current.filter((code) => code !== product.productCode) : [product.productCode, ...current].slice(0, 4);
     }, 'compare');
   };
@@ -833,7 +945,8 @@ export function StorefrontPage() {
       setCheckoutForm((current) => ({ ...current, email: nextSession.email }));
       setAuthStatus(`Signed in as ${nextSession.email}`);
       await syncLocalCartToBackend(nextSession);
-      await syncCustomerListsFromBackend(nextSession);
+      await syncShoppingListsFromBackend(nextSession);
+      await loadCouponWallet(nextSession);
     } catch (nextError) {
       setAuthStatus(undefined);
       setError(nextError instanceof Error ? nextError.message : 'Customer sign-in failed');
@@ -849,6 +962,11 @@ export function StorefrontPage() {
     setBackendEntryCodes({});
     setBackendCartCalculation(undefined);
     setBackendListEntryCodes({ WISHLIST: {}, COMPARE: {} });
+    setDigitalEntitlements([]);
+    setRevealedCouponTokens({});
+    saveCheckoutCouponCode('');
+    setCheckoutForm((current) => ({ ...current, couponCode: '' }));
+    setDigitalWalletStatus(undefined);
     setSyncStatus('Local cart fallback; signed out');
     setAuthStatus('Signed out');
   };
@@ -907,15 +1025,20 @@ export function StorefrontPage() {
   };
 
   const updateCheckout = (field: keyof typeof checkoutForm, value: string) => {
+    if (field === 'couponCode') saveCheckoutCouponCode(value);
     setCheckoutForm((current) => ({ ...current, [field]: value }));
   };
 
-  const promotionPayload = (cartCode?: string) => ({
-    cartCode,
-    subtotal: cart.subtotal.toFixed(2),
-    productCodes: cart.entries.map((entry) => entry.productCode),
-    currency: 'USD',
-  });
+  const promotionPayload = (cartCode?: string) => {
+    const couponCode = checkoutForm.couponCode.trim();
+    return {
+      cartCode,
+      subtotal: cart.subtotal.toFixed(2),
+      productCodes: cart.entries.map((entry) => entry.productCode),
+      currency: 'USD',
+      ...(couponCode ? { couponCode } : {}),
+    };
+  };
 
   const refreshBackendCartCalculation = async (
     cartCode = backendCartCode,
@@ -926,9 +1049,14 @@ export function StorefrontPage() {
       setBackendCartCalculation(undefined);
       return undefined;
     }
-    const calculation = await calculateCart(runtimeConfig, session.accessToken, cartCode, revision);
+    const calculation = await calculateCart(runtimeConfig, session.accessToken, cartCode, revision, checkoutForm.couponCode.trim() || undefined);
     setBackendCartRevision(String(calculation.cart?.revision ?? calculation.revision ?? revision));
     setBackendCartCalculation(calculation);
+    const calculatedDiscount = Number(calculation.discountAmount ?? calculation.decisions?.discount?.discountAmount ?? 0);
+    if (Number.isFinite(calculatedDiscount) && calculatedDiscount > 0) {
+      setBackendPromotionDiscount(calculatedDiscount);
+      setPromotionStatus(calculation.decisions?.discount?.promotionCode ? `Backend promotion calculation ${calculation.decisions.discount.promotionCode}` : 'Backend promotion calculated');
+    }
     return calculation;
   };
 
@@ -949,8 +1077,12 @@ export function StorefrontPage() {
   };
 
   useEffect(() => {
+    if (checkoutForm.couponCode.trim() && backendCartCode) {
+      void refreshBackendCartCalculation();
+      return;
+    }
     void refreshPromotionPreview();
-  }, [customerSession.accessToken, backendCartCode, cart.subtotal, cart.entries.length]);
+  }, [customerSession.accessToken, backendCartCode, cart.subtotal, cart.entries.length, checkoutForm.couponCode]);
 
   const checkoutValidation = () => {
     return validateCheckoutSnapshot(checkoutForm, shippingMethodOptions);
@@ -985,23 +1117,10 @@ export function StorefrontPage() {
     }
     try {
       const checkoutIdempotencyKey = idempotencyKey();
-      if (customerSession.accessToken && cart.entries.length) {
-        try {
-          const promotion = await applyPromotion(runtimeConfig, customerSession.accessToken, {
-            ...promotionPayload(cartCode),
-            idempotencyKey: `promotion-${checkoutIdempotencyKey}`,
-          });
-          const amount = Number(promotion.decisions?.[0]?.discountAmount ?? 0);
-          if (Number.isFinite(amount) && amount > 0) setBackendPromotionDiscount(amount);
-          setPromotionStatus(promotion.redemption?.code ? `Promotion applied ${promotion.redemption.code}` : 'Promotion eligibility checked');
-        } catch {
-          setPromotionStatus('Promotion apply unavailable; order uses current visible estimate');
-        }
-      }
       const response = await placeCheckout(
         runtimeConfig,
         customerSession.accessToken,
-        {
+        Object.assign({
           cartCode,
           orderCode: nextOrderCode,
           calculationCode: `calc-${cartCode}`,
@@ -1023,7 +1142,7 @@ export function StorefrontPage() {
           },
           shippingMethod: checkoutForm.shippingMethod,
           paymentMethod: checkoutForm.paymentMethod,
-        },
+        }, checkoutForm.couponCode.trim() ? { couponCode: checkoutForm.couponCode.trim() } : {}),
         checkoutIdempotencyKey,
       );
       setConfirmation(response);
@@ -1031,6 +1150,7 @@ export function StorefrontPage() {
       const liveOrderCode = response.orderCode ?? response.code ?? response.evidence?.orderCode ?? nextOrderCode;
       setSelectedOrderCode(liveOrderCode);
       cart.clear();
+      saveCheckoutCouponCode('');
       setBackendCartCode(undefined);
       setBackendCartRevision('0');
       setBackendEntryCodes({});
@@ -1042,6 +1162,7 @@ export function StorefrontPage() {
       } catch {
         setOrderDetail(undefined);
       }
+      void loadCouponWallet(customerSession);
       setView('payment-result');
     } catch (nextError) {
       setOrderDetail(undefined);
@@ -1096,7 +1217,7 @@ export function StorefrontPage() {
   const selectedShippingOption = shippingOption(checkoutForm.shippingMethod, shippingMethodOptions);
   const selectedPaymentOption = paymentOption(checkoutForm.paymentMethod);
   const shippingAmount = shippingPrice(checkoutForm.shippingMethod, shippingMethodOptions);
-  const promotionDiscount = backendPromotionDiscount ?? 0;
+  const promotionDiscount = moneyAmount(backendCartCalculation?.discountAmount ?? backendCartCalculation?.decisions?.discount?.discountAmount) ?? backendPromotionDiscount ?? 0;
   const taxAmount = moneyAmount(backendCartCalculation?.taxAmount) ?? 0;
   const backendTotalAmount = moneyAmount(backendCartCalculation?.totalAmount ?? backendCartCalculation?.totals?.total);
   const totalAmount = backendTotalAmount !== undefined ? Math.max(0, backendTotalAmount + shippingAmount) : Math.max(0, cart.subtotal - promotionDiscount + shippingAmount);
@@ -1119,7 +1240,7 @@ export function StorefrontPage() {
     if (key === 'categories' || key === 'collections') return collectionLabelByCode.get(value) ?? humanizeCodeLabel(value);
     return value;
   };
-  const collectionIndexContent = homeContent.collectionIndex;
+  const collectionIndexContent = experienceContent.collectionIndex ?? homeContent.collectionIndex;
   const listingEyebrow = searchContext === 'brand'
     ? 'Brand edit'
     : searchContext === 'category'
@@ -1127,8 +1248,8 @@ export function StorefrontPage() {
       : searchContext === 'collection'
         ? 'Collection edit'
         : 'Product Listing';
-  const listingHeading = selectedCollection?.label ?? productListingContent?.heading ?? 'Shop products';
-  const listingSummary = selectedCollection?.summary ?? productListingContent?.summary ?? 'Explore the latest apparel pieces resolved from Commerce discovery.';
+  const listingHeading = productListingContent?.heading ?? selectedCollection?.label ?? 'Shop products';
+  const listingSummary = productListingContent?.summary ?? selectedCollection?.summary ?? 'Explore the latest apparel pieces resolved from Commerce discovery.';
   const listingResultLabel = productListingContent?.resultLabel ?? 'products';
   const completeStatusLabel = productListingContent?.completeStatusLabel ?? `All matching ${listingResultLabel} are visible`;
   const displayedProductCount = visibleProducts.length;
@@ -1248,6 +1369,62 @@ export function StorefrontPage() {
     }
   };
 
+  const loadCouponWallet = async (session = customerSession) => {
+    if (!session.accessToken) {
+      setDigitalWalletStatus('Sign in to view purchased coupon codes.');
+      setDigitalEntitlements([]);
+      return;
+    }
+    setDigitalWalletStatus('Loading coupon wallet…');
+    try {
+      const response = await listDigitalEntitlements(runtimeConfig, session.accessToken);
+      setDigitalEntitlements(response.entitlements);
+      setDigitalWalletStatus(response.entitlements.length ? `${response.entitlements.length} coupon entitlement(s) loaded` : 'No purchased coupon codes yet.');
+    } catch (nextError) {
+      setDigitalWalletStatus(nextError instanceof Error ? nextError.message : 'Coupon wallet unavailable');
+    }
+  };
+
+  const openCouponWallet = () => {
+    setView('coupons');
+    if (typeof window !== 'undefined') window.history.pushState({}, '', '/coupons');
+    void loadCouponWallet();
+  };
+
+  const revealCoupon = (entitlementCode: string) => {
+    if (!customerSession.accessToken) {
+      setDigitalWalletStatus('Sign in to reveal purchased coupon codes.');
+      return;
+    }
+    setDigitalWalletStatus('Revealing coupon code…');
+    void revealDigitalEntitlement(runtimeConfig, customerSession.accessToken, entitlementCode)
+      .then((response) => {
+        const token = response.token;
+        if (!token) {
+          setDigitalWalletStatus(response.reasonCode ?? 'Coupon code is not available to reveal yet.');
+          return;
+        }
+        setRevealedCouponTokens((current) => ({ ...current, [entitlementCode]: token }));
+        setDigitalWalletStatus('Coupon code revealed');
+      })
+      .catch((nextError: unknown) => setDigitalWalletStatus(nextError instanceof Error ? nextError.message : 'Coupon reveal failed'));
+  };
+
+  const useRevealedCoupon = (token: string) => {
+    saveCheckoutCouponCode(token);
+    setCheckoutForm((current) => ({ ...current, couponCode: token }));
+    setDigitalWalletStatus('Coupon code added to checkout.');
+    if (cart.entries.length) {
+      setCheckoutStep('payment');
+      setView('checkout');
+      if (typeof window !== 'undefined') window.history.pushState({}, '', '/checkout');
+    }
+  };
+
+  useEffect(() => {
+    if (view === 'coupons') void loadCouponWallet(customerSession);
+  }, [customerSession.accessToken, view]);
+
   useEffect(() => {
     const applyRouteState = () => {
       const nextRouteState = routeStateFromLocation(rootCollectionCode);
@@ -1261,6 +1438,7 @@ export function StorefrontPage() {
       if (nextRouteState.view !== 'pdp') setSelected(undefined);
       if (nextRouteState.checkoutStep) setCheckoutStep(nextRouteState.checkoutStep);
       if (nextRouteState.view === 'orders') void loadOrderHistory(customerSession);
+      if (nextRouteState.view === 'coupons') void loadCouponWallet(customerSession);
     };
     window.addEventListener('popstate', applyRouteState);
     return () => window.removeEventListener('popstate', applyRouteState);
@@ -1268,6 +1446,10 @@ export function StorefrontPage() {
 
   const openAction = (action: AgoraLinkAction | undefined) => {
     if (!action) return;
+    if (action.productCode) {
+      openProduct(action.productCode);
+      return;
+    }
     if (action.collectionCode) {
       openCollection(action.collectionCode);
       return;
@@ -1287,6 +1469,10 @@ export function StorefrontPage() {
     }
     if (action.path === '/shop') {
       openProductListing('all');
+      return;
+    }
+    if (action.path === '/coupons') {
+      openCouponWallet();
       return;
     }
     if (action.path) {
@@ -1441,6 +1627,13 @@ export function StorefrontPage() {
     );
   };
   const renderHeaderAction = (action: AgoraLinkAction, className?: string) => {
+    if (action.productCode) {
+      return (
+        <button className={className} key={`${action.label}-${action.productCode}`} onClick={() => openProduct(action.productCode ?? '')} type="button">
+          {action.label}
+        </button>
+      );
+    }
     if (action.collectionCode) {
       return (
         <button className={className} key={`${action.label}-${action.collectionCode}`} onClick={() => openCollection(action.collectionCode ?? '')} type="button">
@@ -1466,6 +1659,7 @@ export function StorefrontPage() {
     return {
       label: menu.label,
       ...(menu.collectionCode ? { collectionCode: menu.collectionCode } : {}),
+      ...(menu.productCode ? { productCode: menu.productCode } : {}),
       ...(menu.path ? { path: menu.path } : {}),
     };
   };
@@ -1641,6 +1835,8 @@ export function StorefrontPage() {
                 <h2>Signed in as {customerSession.email}</h2>
                 <p>Wishlist, compare, cart, and order self-service are synchronized with Commerce APIs.</p>
               </div>
+              <button onClick={openCouponWallet} type="button">My coupons</button>
+              <button className="secondary" onClick={() => { setView('orders'); if (typeof window !== 'undefined') window.history.pushState({}, '', '/orders'); void loadOrderHistory(); }} type="button">My orders</button>
               <button className="secondary" onClick={signOut} type="button">Sign out</button>
             </>
           ) : (
@@ -1686,7 +1882,7 @@ export function StorefrontPage() {
                 className="hero-search"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  setView('plp');
+                  openProductListing('all');
                 }}
               >
                 <input
@@ -1979,6 +2175,7 @@ export function StorefrontPage() {
                   </div>
                   <label>Name on card<input aria-label="Name on card" onChange={(event) => updateCheckout('cardName', event.target.value)} value={checkoutForm.cardName} /></label>
                   <label>Card ending<input aria-label="Card ending" maxLength={4} onChange={(event) => updateCheckout('cardLast4', event.target.value.replace(/\D/gu, '').slice(0, 4))} value={checkoutForm.cardLast4} /></label>
+                  <label>Coupon code<input aria-label="Coupon code" onChange={(event) => updateCheckout('couponCode', event.target.value)} value={checkoutForm.couponCode} /></label>
                   <button onClick={() => { void refreshBackendCartCalculation(); setCheckoutStep('review'); }} type="button">Review order</button>
                 </>
               ) : null}
@@ -2050,6 +2247,7 @@ export function StorefrontPage() {
           </article>
           <div className="quick-view-actions">
             <button onClick={() => { setSelectedOrderCode(confirmedOrderCode); setView('orders'); void loadOrderHistory(customerSession, confirmedOrderCode); }} type="button">View order</button>
+            <button className="secondary" onClick={openCouponWallet} type="button">My coupons</button>
             <button className="secondary" onClick={() => requestLifecycle('CANCELLATION')} type="button">Request cancellation</button>
             <button className="secondary" onClick={() => requestLifecycle('RETURN')} type="button">Request return</button>
             <button className="secondary" onClick={() => requestLifecycle('REFUND')} type="button">Request refund status</button>
@@ -2059,6 +2257,43 @@ export function StorefrontPage() {
           </div>
           {lifecycleStatus ? <p role="status">{lifecycleStatus}</p> : null}
           <button onClick={() => setView('home')} type="button">Continue shopping</button>
+        </section>
+      ) : view === 'coupons' ? (
+        <section className="confirmation digital-wallet">
+          <p className="eyebrow">Coupon Wallet</p>
+          <h2>My Coupon Codes</h2>
+          <div className="quick-view-actions">
+            <button className="secondary" onClick={() => void loadCouponWallet()} type="button">Refresh coupons</button>
+            <button className="secondary" onClick={() => openProductListing('all')} type="button">Shop products</button>
+          </div>
+          {digitalWalletStatus ? <p role="status">{digitalWalletStatus}</p> : null}
+          {!customerSession.accessToken ? <p>Sign in to view purchased coupon codes.</p> : null}
+          {digitalEntitlements.length ? (
+            <section aria-label="Purchased coupon codes" className="wallet-grid">
+              {digitalEntitlements.map((entitlement) => {
+                const token = revealedCouponTokens[entitlement.code];
+                return (
+                  <article className="checkout-card wallet-card" key={entitlement.code}>
+                    <div>
+                      <p className="eyebrow">{entitlement.digitalDeliveryType === 'COUPON_CODE' ? 'Digital coupon code' : humanizeCodeLabel(entitlement.digitalDeliveryType ?? 'Digital entitlement')}</p>
+                      <h3>{humanizeCodeLabel(entitlement.productCode)}</h3>
+                      <p>Status: {entitlement.status} · Claim: {entitlement.claimStatus ?? 'UNCLAIMED'}</p>
+                      {entitlement.orderCode ? <p>Purchased from order {entitlement.orderCode}</p> : null}
+                      {entitlement.providerCode ? <p className="muted">Allocated code reference: {entitlement.providerCode}</p> : null}
+                    </div>
+                    {token ? (
+                      <div className="coupon-token">
+                        <span>{token}</span>
+                        <button onClick={() => useRevealedCoupon(token)} type="button">Use at checkout</button>
+                      </div>
+                    ) : (
+                      <button disabled={entitlement.status !== 'ACTIVE'} onClick={() => revealCoupon(entitlement.code)} type="button">Reveal code</button>
+                    )}
+                  </article>
+                );
+              })}
+            </section>
+          ) : null}
         </section>
       ) : view === 'orders' ? (
         <section className="confirmation">

@@ -48,8 +48,8 @@ describe('order lifecycle contract', () => {
       appealReason: 'Inspection evidence missing',
     });
 
-    expect(calls[0]?.target).toContain('/customer/orders/order-1/lifecycle/preview');
-    expect(calls[1]?.target).toContain('/customer/orders/order-1/lifecycle');
+    expect(calls[0]?.target).toContain('/orders/order-1/lifecycle/preview');
+    expect(calls[1]?.target).toContain('/orders/order-1/lifecycle');
     expect(result.created.status).toBe('SUBMITTED');
     expect(calls[1]?.body).toMatchObject({
       requestType: 'RETURN',
@@ -94,7 +94,7 @@ describe('order lifecycle contract', () => {
     });
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]).toContain('/customer/orders/order-1/lifecycle/preview');
+    expect(calls[0]).toContain('/orders/order-1/lifecycle/preview');
     expect(preview.rmaCode).toBe('order-1:RMA:1');
     expect(lifecyclePayload('order-1', 'APPEAL', { appealReferenceCode: 'case-1' }).evidence?.appealReferenceCode).toBe('case-1');
     vi.unstubAllGlobals();

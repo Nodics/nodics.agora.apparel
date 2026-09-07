@@ -4,6 +4,7 @@ import type { AgoraRuntimeConfig } from '../runtime/config';
 export interface AgoraLinkAction {
   readonly label: string;
   readonly collectionCode?: string;
+  readonly productCode?: string;
   readonly path?: string;
 }
 
@@ -45,6 +46,7 @@ export interface AgoraMegaMenu {
   readonly summary?: string;
   readonly path?: string;
   readonly collectionCode?: string;
+  readonly productCode?: string;
   readonly badge?: string;
   readonly groups: readonly AgoraMegaMenuGroup[];
   readonly featureTiles: readonly AgoraMegaMenuTile[];
@@ -432,13 +434,14 @@ function action(value: unknown): AgoraLinkAction | undefined {
   return Object.freeze({
     label,
     ...(string(value.collectionCode) ? { collectionCode: string(value.collectionCode) } : {}),
+    ...(string(value.productCode) ? { productCode: string(value.productCode) } : {}),
     ...(string(value.path) ? { path: string(value.path) } : {}),
   });
 }
 
 function headerNavigationItem(value: unknown): AgoraHeaderNavigationItem | undefined {
   const item = action(value);
-  if (!item || (!item.collectionCode && !item.path)) return undefined;
+  if (!item || (!item.collectionCode && !item.productCode && !item.path)) return undefined;
   return Object.freeze({
     ...item,
     ...(isRecord(value) && typeof value.dropdown === 'boolean' ? { dropdown: value.dropdown } : {}),
@@ -447,13 +450,13 @@ function headerNavigationItem(value: unknown): AgoraHeaderNavigationItem | undef
 
 function headerAction(value: unknown): AgoraLinkAction | undefined {
   const item = action(value);
-  if (!item || (!item.collectionCode && !item.path)) return undefined;
+  if (!item || (!item.collectionCode && !item.productCode && !item.path)) return undefined;
   return item;
 }
 
 function megaMenuLink(value: unknown): AgoraMegaMenuLink | undefined {
   const item = action(value);
-  if (!item || (!item.collectionCode && !item.path)) return undefined;
+  if (!item || (!item.collectionCode && !item.productCode && !item.path)) return undefined;
   if (!isRecord(value)) return item;
   return Object.freeze({
     ...item,
@@ -467,7 +470,7 @@ function megaMenuLink(value: unknown): AgoraMegaMenuLink | undefined {
 
 function megaMenuPromo(value: unknown): AgoraMegaMenuPromo | undefined {
   const item = action(value);
-  if (!item || (!item.collectionCode && !item.path)) return undefined;
+  if (!item || (!item.collectionCode && !item.productCode && !item.path)) return undefined;
   if (!isRecord(value)) return item;
   return Object.freeze({
     ...item,
@@ -570,12 +573,13 @@ function megaMenus(config: AgoraRuntimeConfig, componentValue: CmsComponentContr
       ...(string(item.summary) ? { summary: string(item.summary) } : {}),
       ...(string(item.path) ? { path: string(item.path) } : {}),
       ...(string(item.collectionCode) ? { collectionCode: string(item.collectionCode) } : {}),
+      ...(string(item.productCode) ? { productCode: string(item.productCode) } : {}),
       ...(string(item.badge) ? { badge: string(item.badge) } : {}),
       groups,
       featureTiles,
       promoStripe,
     });
-  }).filter((item) => item.code && item.label && (item.path || item.collectionCode || item.groups.length || item.featureTiles.length)));
+  }).filter((item) => item.code && item.label && (item.path || item.collectionCode || item.productCode || item.groups.length || item.featureTiles.length)));
 }
 
 function listingExperience(config: AgoraRuntimeConfig, componentValue: CmsComponentContract | undefined): AgoraListingExperience | undefined {
