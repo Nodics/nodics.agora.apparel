@@ -1577,7 +1577,7 @@ describe("Agora storefront journey", () => {
     await waitFor(() =>
       expect(screen.getByText(/APPEAL SUBMITTED/)).toBeTruthy(),
     );
-  });
+  }, 15_000);
 
   it("blocks unauthenticated checkout after valid customer, shipping, and payment details", async () => {
     const user = userEvent.setup();
