@@ -32,3 +32,8 @@ npm run verify
 
 Local end-to-end topology and data qualification are orchestrated from
 `nodics.kickoff`.
+
+Release CI checks out the frontend and the matching `development` or `master`
+branch of `Nodics/nodics.kickoff` into separate directories. The renderer mapping
+test reads that checkout through `NODICS_KICKOFF_ROOT`; reference backend records
+remain owned by Kickoff. The existing workflow also supports manual dispatch.
