@@ -1,13 +1,35 @@
-import type { CSSProperties } from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { ArrowUpRight, BadgePercent, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Headphones, Heart, RotateCcw, Search, ShieldCheck, ShoppingBag, Truck, UserRound, type LucideIcon } from 'lucide-react';
+import { useCompactListing } from "../listing/useCompactListing";
+import {
+  readListingLocation,
+  listingLocationSearch,
+} from "../listing/listingLocation";
+import type { CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  ArrowUpRight,
+  BadgePercent,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CircleHelp,
+  Headphones,
+  Heart,
+  RotateCcw,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
+  Truck,
+  UserRound,
+  type LucideIcon,
+} from "lucide-react";
 
 import {
   addCartEntry,
   addShoppingListEntry,
   calculateCart,
   createCart,
+  readCart,
   getProduct,
   listCustomerOrders,
   listDigitalEntitlements,
@@ -32,43 +54,130 @@ import {
   type ProductCard,
   type ProductDetail,
   type ReturnMethodResponse,
-} from '../api/commerceClient';
-import { getReviewAggregate, listPublishedReviews, type PublicReview, type ReviewAggregate } from '../api/engagementClient';
-import { authenticateCustomer, customerAccessToken } from '../api/profileClient';
+} from "../api/commerceClient";
+import {
+  getReviewAggregate,
+  listPublishedReviews,
+  type PublicReview,
+  type ReviewAggregate,
+} from "../api/engagementClient";
+import {
+  authenticateCustomer,
+  customerAccessToken,
+} from "../api/profileClient";
 import {
   apparelColorOptions as productColorOptions,
   apparelImageUrlForVariant,
   apparelSelectionForVariant,
   apparelSizeOptions as productSizeOptions,
   apparelVariantForSelection as productVariantForSelection,
-} from '../accelerators/apparel/apparelOptions';
-import { useLocalCart } from '../cart/cartState';
-import { maskedPaymentLabel, normalizeShippingOptions, paymentOption, paymentOptions, shippingOption, shippingOptions, shippingPrice, type ShippingOption } from '../checkout/checkoutOptions';
-import { paymentResultViewModel, type PaymentResultViewModel } from '../checkout/paymentResult';
-import { paymentProviderToken as checkoutPaymentProviderToken, validateCheckoutSnapshot } from '../checkout/checkoutValidation';
-import { agoraHomeContent, EMPTY_AGORA_HOME_CONTENT, type AgoraCollectionTile, type AgoraLinkAction, type AgoraMediaItem, type AgoraMegaMenu } from '../cms/agoraHomeContent';
-import { resolveCmsPage } from '../cms/cmsClient';
-import type { CmsResolvedPageContract } from '../cms/cmsContract';
-import { resolveWcmsExperience, wcmsExperienceToCmsPage, type WcmsExperienceTargetType } from '../cms/wcmsExperienceClient';
-import { productAvailabilityLabel } from '../commerce/availabilityPresentation';
-import { productBrandLabel } from '../commerce/productPresentation';
-import { ProductCarousel } from '../components/ProductCarousel';
-import { ProductCardView } from '../components/ProductCardView';
-import { ProductFilterDrawer, ProductListingToolbar, type ProductFilterKey, type ProductFilterOptionGroup, type ProductFilterState, type ProductListingLayout } from '../components/ProductListingControls';
-import { clearAgoraCustomerSession, resolveAgoraCustomerSession, saveAgoraCustomerSession, type CustomerSession } from '../customer/customerSession';
-import { ProductMediaPlaceholder, mediaDeliveryUrl, productGalleryImageUrl, productGalleryUrls, productImageUrl } from '../media/productVisual';
-import { lifecycleAutomationPlan, lifecycleFormGuidance, lifecycleReasonOptions, lifecycleSummary, lifecycleTimeline, lifecycleTrackingSummary, lifecycleTypes, preferredResolutionOptions, previewLifecycleRequest, refundMethodOptions, submitLifecycleRequest } from '../order/orderLifecycle';
-import { runtimeConfig } from '../runtime/config';
+} from "../accelerators/apparel/apparelOptions";
+import { cartEntryKey, useLocalCart } from "../cart/cartState";
+import {
+  maskedPaymentLabel,
+  normalizeShippingOptions,
+  paymentOption,
+  paymentOptions,
+  shippingOption,
+  shippingOptions,
+  shippingPrice,
+  type ShippingOption,
+} from "../checkout/checkoutOptions";
+import {
+  paymentResultViewModel,
+  type PaymentResultViewModel,
+} from "../checkout/paymentResult";
+import {
+  paymentProviderToken as checkoutPaymentProviderToken,
+  validateCheckoutSnapshot,
+} from "../checkout/checkoutValidation";
+import {
+  agoraHomeContent,
+  EMPTY_AGORA_HOME_CONTENT,
+  type AgoraCollectionTile,
+  type AgoraLinkAction,
+  type AgoraMediaItem,
+  type AgoraMegaMenu,
+} from "../cms/agoraHomeContent";
+import { resolveCmsPage } from "../cms/cmsClient";
+import type { CmsResolvedPageContract } from "../cms/cmsContract";
+import {
+  resolveWcmsExperience,
+  wcmsExperienceToCmsPage,
+  type WcmsExperienceTargetType,
+} from "../cms/wcmsExperienceClient";
+import { productAvailabilityLabel } from "../commerce/availabilityPresentation";
+import { productBrandLabel } from "../commerce/productPresentation";
+import { ProductCarousel } from "../components/ProductCarousel";
+import { ProductCardView } from "../components/ProductCardView";
+import {
+  ProductFilterDrawer,
+  ProductListingToolbar,
+  type ProductFilterKey,
+  type ProductFilterOptionGroup,
+  type ProductFilterState,
+  type ProductListingLayout,
+} from "../components/ProductListingControls";
+import {
+  clearAgoraCustomerSession,
+  resolveAgoraCustomerSession,
+  saveAgoraCustomerSession,
+  type CustomerSession,
+} from "../customer/customerSession";
+import {
+  ProductMediaPlaceholder,
+  mediaDeliveryUrl,
+  productGalleryImageUrl,
+  productGalleryUrls,
+  productImageUrl,
+} from "../media/productVisual";
+import {
+  lifecycleAutomationPlan,
+  lifecycleFormGuidance,
+  lifecycleReasonOptions,
+  lifecycleSummary,
+  lifecycleTimeline,
+  lifecycleTrackingSummary,
+  lifecycleTypes,
+  preferredResolutionOptions,
+  previewLifecycleRequest,
+  refundMethodOptions,
+  submitLifecycleRequest,
+} from "../order/orderLifecycle";
+import { runtimeConfig } from "../runtime/config";
 
-type View = 'home' | 'collections' | 'plp' | 'pdp' | 'cart' | 'checkout' | 'payment-result' | 'confirmation' | 'orders' | 'coupons';
-type CheckoutStep = 'customer' | 'shipping' | 'payment' | 'review';
-type ProductSearchContext = 'all' | 'brand' | 'category' | 'collection';
-type StorefrontShoppingListType = Extract<ShoppingListType, 'WISHLIST' | 'COMPARE'>;
+type View =
+  | "home"
+  | "collections"
+  | "plp"
+  | "pdp"
+  | "cart"
+  | "checkout"
+  | "payment-result"
+  | "confirmation"
+  | "orders"
+  | "coupons";
+type CheckoutStep = "customer" | "shipping" | "payment" | "review";
+type ProductSearchContext = "all" | "brand" | "category" | "collection";
+type StorefrontShoppingListType = Extract<
+  ShoppingListType,
+  "WISHLIST" | "COMPARE"
+>;
 const PRODUCT_LISTING_BATCH_SIZE = 10;
-const PRODUCT_LISTING_DEFAULT_HERO_MEDIA_CODE = 'agora-owned-product-listing-wide-hero';
-const PRODUCT_LISTING_DEFAULT_HERO_FALLBACK_SRC = '/media/agora-owned-product-listing-wide-hero.jpg';
-const isProductListingLayout = function (value: string | undefined): value is ProductListingLayout {
-  return value === 'list' || value === 'grid-2' || value === 'grid-3' || value === 'grid-4' || value === 'grid-5';
+const PRODUCT_LISTING_DEFAULT_HERO_MEDIA_CODE =
+  "agora-owned-product-listing-wide-hero";
+const PRODUCT_LISTING_DEFAULT_HERO_FALLBACK_SRC =
+  "/media/agora-owned-product-listing-wide-hero.jpg";
+const isProductListingLayout = function (
+  value: string | undefined,
+): value is ProductListingLayout {
+  return (
+    value === "list" ||
+    value === "grid-2" ||
+    value === "grid-3" ||
+    value === "grid-4" ||
+    value === "grid-5"
+  );
 };
 type RouteState = {
   readonly view: View;
@@ -81,24 +190,24 @@ type RouteState = {
 };
 const orderCode = () => `storefront-order-${Date.now()}`;
 const idempotencyKey = () => `storefront-checkout-${Date.now()}`;
-const checkoutCouponStorageKey = 'nodics.storefront.checkoutCouponCode';
+const checkoutCouponStorageKey = "nodics.storefront.checkoutCouponCode";
 const EMPTY_PRODUCT_FILTERS: ProductFilterState = Object.freeze({
   availability: [],
   brands: [],
   categories: [],
   collections: [],
   colors: [],
-  priceMax: '',
-  priceMin: '',
+  priceMax: "",
+  priceMin: "",
   saleOnly: false,
   sizes: [],
 });
 const readCheckoutCouponCode = function (): string {
-  if (typeof window === 'undefined') return '';
-  return window.sessionStorage.getItem(checkoutCouponStorageKey) ?? '';
+  if (typeof window === "undefined") return "";
+  return window.sessionStorage.getItem(checkoutCouponStorageKey) ?? "";
 };
 const saveCheckoutCouponCode = function (couponCode: string): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   const nextCouponCode = couponCode.trim();
   if (nextCouponCode) {
     window.sessionStorage.setItem(checkoutCouponStorageKey, nextCouponCode);
@@ -107,104 +216,246 @@ const saveCheckoutCouponCode = function (couponCode: string): void {
   }
 };
 const cmsPathForView = function (view: View): string {
-  if (view === 'collections') return '/collections';
-  if (view === 'plp') return '/shop';
-  return '/';
+  if (view === "collections") return "/collections";
+  if (view === "plp") return "/shop";
+  return "/";
 };
 
 const experiencePageTypeForView = function (view: View): string | undefined {
-  if (view === 'collections') return 'COLLECTION_INDEX';
-  if (view === 'plp') return 'PRODUCT_LISTING';
+  if (view === "collections") return "COLLECTION_INDEX";
+  if (view === "plp") return "PRODUCT_LISTING";
   return undefined;
 };
 
-const experienceTargetForRoute = function (view: View, searchContext: ProductSearchContext, searchCode: string): { readonly targetType: WcmsExperienceTargetType; readonly targetCode: string } {
-  if (view === 'collections' || searchContext === 'all' || !searchCode.trim()) return { targetType: 'DEFAULT', targetCode: '*' };
-  if (searchContext === 'brand') return { targetType: 'BRAND', targetCode: searchCode };
-  if (searchContext === 'category') return { targetType: 'CATEGORY', targetCode: searchCode };
-  return { targetType: 'COLLECTION', targetCode: searchCode };
+const experienceTargetForRoute = function (
+  view: View,
+  searchContext: ProductSearchContext,
+  searchCode: string,
+): {
+  readonly targetType: WcmsExperienceTargetType;
+  readonly targetCode: string;
+} {
+  if (view === "collections" || searchContext === "all" || !searchCode.trim())
+    return { targetType: "DEFAULT", targetCode: "*" };
+  if (searchContext === "brand")
+    return { targetType: "BRAND", targetCode: searchCode };
+  if (searchContext === "category")
+    return { targetType: "CATEGORY", targetCode: searchCode };
+  return { targetType: "COLLECTION", targetCode: searchCode };
 };
 
 const experienceDevice = function (): string {
-  if (typeof window === 'undefined') return 'desktop';
-  if (window.innerWidth < 768) return 'mobile';
-  if (window.innerWidth < 1100) return 'tablet';
-  return 'desktop';
+  if (typeof window === "undefined") return "desktop";
+  if (window.innerWidth < 768) return "mobile";
+  if (window.innerWidth < 1100) return "tablet";
+  return "desktop";
 };
 
-const routeStateFromLocation = function (rootCollectionCode = ''): RouteState {
-  if (typeof window === 'undefined') return { view: 'home', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query: '' };
-  const path = window.location.pathname.replace(/\/+$/u, '') || '/';
+const routeStateFromLocation = function (rootCollectionCode = ""): RouteState {
+  if (typeof window === "undefined")
+    return {
+      view: "home",
+      collectionCode: rootCollectionCode,
+      searchCode: rootCollectionCode,
+      searchContext: "collection",
+      query: "",
+    };
+  const path = window.location.pathname.replace(/\/+$/u, "") || "/";
   const params = new URLSearchParams(window.location.search);
-  const query = params.get('q') ?? '';
-  const collection = params.get('collection') ?? params.get('collectionCode') ?? '';
-  const category = params.get('category') ?? params.get('categoryCode') ?? '';
-  const brand = params.get('brand') ?? params.get('brandCode') ?? '';
-  if (path === '/cart') return { view: 'cart', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query };
-  if (path === '/checkout') return { view: 'checkout', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query, checkoutStep: 'customer' };
-  if (path === '/orders') return { view: 'orders', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query };
-  if (path === '/coupons') return { view: 'coupons', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query };
-  if (path === '/collections') return { view: 'collections', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query };
-  if (path === '/shop') {
-    if (brand) return { view: 'plp', collectionCode: rootCollectionCode, searchCode: brand, searchContext: 'brand', query };
-    if (category) return { view: 'plp', collectionCode: category, searchCode: category, searchContext: 'category', query };
-    if (collection) return { view: 'plp', collectionCode: collection, searchCode: collection, searchContext: 'collection', query };
-    return { view: 'plp', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'all', query };
+  const query = params.get("q") ?? "";
+  const collection =
+    params.get("collection") ?? params.get("collectionCode") ?? "";
+  const category = params.get("category") ?? params.get("categoryCode") ?? "";
+  const brand = params.get("brand") ?? params.get("brandCode") ?? "";
+  if (path === "/cart")
+    return {
+      view: "cart",
+      collectionCode: rootCollectionCode,
+      searchCode: rootCollectionCode,
+      searchContext: "collection",
+      query,
+    };
+  if (path === "/checkout")
+    return {
+      view: "checkout",
+      collectionCode: rootCollectionCode,
+      searchCode: rootCollectionCode,
+      searchContext: "collection",
+      query,
+      checkoutStep: "customer",
+    };
+  if (path === "/orders")
+    return {
+      view: "orders",
+      collectionCode: rootCollectionCode,
+      searchCode: rootCollectionCode,
+      searchContext: "collection",
+      query,
+    };
+  if (path === "/coupons")
+    return {
+      view: "coupons",
+      collectionCode: rootCollectionCode,
+      searchCode: rootCollectionCode,
+      searchContext: "collection",
+      query,
+    };
+  if (path === "/collections")
+    return {
+      view: "collections",
+      collectionCode: rootCollectionCode,
+      searchCode: rootCollectionCode,
+      searchContext: "collection",
+      query,
+    };
+  if (path === "/shop") {
+    if (brand)
+      return {
+        view: "plp",
+        collectionCode: rootCollectionCode,
+        searchCode: brand,
+        searchContext: "brand",
+        query,
+      };
+    if (category)
+      return {
+        view: "plp",
+        collectionCode: category,
+        searchCode: category,
+        searchContext: "category",
+        query,
+      };
+    if (collection)
+      return {
+        view: "plp",
+        collectionCode: collection,
+        searchCode: collection,
+        searchContext: "collection",
+        query,
+      };
+    return {
+      view: "plp",
+      collectionCode: rootCollectionCode,
+      searchCode: rootCollectionCode,
+      searchContext: "all",
+      query,
+    };
   }
-  if (path.startsWith('/shop/brand/')) return { view: 'plp', collectionCode: rootCollectionCode, searchCode: decodeURIComponent(path.slice('/shop/brand/'.length)), searchContext: 'brand', query };
-  if (path.startsWith('/shop/category/')) {
-    const code = decodeURIComponent(path.slice('/shop/category/'.length));
-    return { view: 'plp', collectionCode: code, searchCode: code, searchContext: 'category', query };
+  if (path.startsWith("/shop/brand/"))
+    return {
+      view: "plp",
+      collectionCode: rootCollectionCode,
+      searchCode: decodeURIComponent(path.slice("/shop/brand/".length)),
+      searchContext: "brand",
+      query,
+    };
+  if (path.startsWith("/shop/category/")) {
+    const code = decodeURIComponent(path.slice("/shop/category/".length));
+    return {
+      view: "plp",
+      collectionCode: code,
+      searchCode: code,
+      searchContext: "category",
+      query,
+    };
   }
-  if (path.startsWith('/shop/collection/')) {
-    const code = decodeURIComponent(path.slice('/shop/collection/'.length));
-    return { view: 'plp', collectionCode: code, searchCode: code, searchContext: 'collection', query };
+  if (path.startsWith("/shop/collection/")) {
+    const code = decodeURIComponent(path.slice("/shop/collection/".length));
+    return {
+      view: "plp",
+      collectionCode: code,
+      searchCode: code,
+      searchContext: "collection",
+      query,
+    };
   }
-  if (path.startsWith('/products/')) return { view: 'pdp', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query: '', productSlug: decodeURIComponent(path.slice('/products/'.length)) };
-  return { view: 'home', collectionCode: rootCollectionCode, searchCode: rootCollectionCode, searchContext: 'collection', query };
+  if (path.startsWith("/products/"))
+    return {
+      view: "pdp",
+      collectionCode: rootCollectionCode,
+      searchCode: rootCollectionCode,
+      searchContext: "collection",
+      query: "",
+      productSlug: decodeURIComponent(path.slice("/products/".length)),
+    };
+  return {
+    view: "home",
+    collectionCode: rootCollectionCode,
+    searchCode: rootCollectionCode,
+    searchContext: "collection",
+    query,
+  };
 };
 const facetLabel = (value: unknown): string => {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  if (value && typeof value === 'object') {
-    const facetValue = value as { readonly code?: unknown; readonly name?: unknown; readonly label?: unknown; readonly count?: unknown };
-    const label = [facetValue.label, facetValue.name, facetValue.code].find((candidate) => typeof candidate === 'string');
-    const count = typeof facetValue.count === 'number' || typeof facetValue.count === 'string' ? ` (${facetValue.count})` : '';
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
+  if (value && typeof value === "object") {
+    const facetValue = value as {
+      readonly code?: unknown;
+      readonly name?: unknown;
+      readonly label?: unknown;
+      readonly count?: unknown;
+    };
+    const label = [facetValue.label, facetValue.name, facetValue.code].find(
+      (candidate) => typeof candidate === "string",
+    );
+    const count =
+      typeof facetValue.count === "number" ||
+      typeof facetValue.count === "string"
+        ? ` (${facetValue.count})`
+        : "";
     if (label) return `${label}${count}`;
   }
-  return 'Available';
+  return "Available";
 };
 
-const moneyAmount = function (value: string | number | undefined): number | undefined {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
-  if (typeof value !== 'string' || value.trim() === '') return undefined;
+const moneyAmount = function (
+  value: string | number | undefined,
+): number | undefined {
+  if (typeof value === "number")
+    return Number.isFinite(value) ? value : undefined;
+  if (typeof value !== "string" || value.trim() === "") return undefined;
   const amount = Number(value);
   return Number.isFinite(amount) ? amount : undefined;
 };
 
 const normalizedText = function (value: string | undefined): string {
-  return (value ?? '').trim().toLowerCase();
+  return (value ?? "").trim().toLowerCase();
 };
 
 const humanizeCodeLabel = function (value: string): string {
   return value
-    .replace(/^agora/iu, '')
-    .replace(/([a-z])([A-Z])/gu, '$1 $2')
-    .replace(/[-_]+/gu, ' ')
+    .replace(/^agora/iu, "")
+    .replace(/([a-z])([A-Z])/gu, "$1 $2")
+    .replace(/[-_]+/gu, " ")
     .trim()
-    .replace(/\s+/gu, ' ')
+    .replace(/\s+/gu, " ")
     .replace(/\b\w/gu, (letter) => letter.toUpperCase());
 };
 
 const productSlugSearchTerm = function (slug: string): string {
-  return slug.replace(/[-_]+/gu, ' ').trim();
+  return slug.replace(/[-_]+/gu, " ").trim();
 };
 
-const uniqueSorted = function (values: readonly (string | undefined)[]): readonly string[] {
-  return Array.from(new Set(values.filter((value): value is string => Boolean(value?.trim())))).sort((left, right) => left.localeCompare(right));
+const uniqueSorted = function (
+  values: readonly (string | undefined)[],
+): readonly string[] {
+  return Array.from(
+    new Set(values.filter((value): value is string => Boolean(value?.trim()))),
+  ).sort((left, right) => left.localeCompare(right));
 };
 
-const discoveryTotal = function (response: { readonly total?: number; readonly totalCount?: number; readonly productCount?: number; readonly pagination?: { readonly total?: number; readonly totalCount?: number; readonly productCount?: number } }): number | undefined {
+const discoveryTotal = function (response: {
+  readonly total?: number;
+  readonly totalCount?: number;
+  readonly productCount?: number;
+  readonly pagination?: {
+    readonly total?: number;
+    readonly totalCount?: number;
+    readonly productCount?: number;
+  };
+}): number | undefined {
   const candidates = [
     response.total,
     response.totalCount,
@@ -213,29 +464,30 @@ const discoveryTotal = function (response: { readonly total?: number; readonly t
     response.pagination?.totalCount,
     response.pagination?.productCount,
   ];
-  return candidates.find((candidate): candidate is number => typeof candidate === 'number' && Number.isFinite(candidate) && candidate >= 0);
+  return candidates.find(
+    (candidate): candidate is number =>
+      typeof candidate === "number" &&
+      Number.isFinite(candidate) &&
+      candidate >= 0,
+  );
 };
 
-const includesAny = function (availableValues: readonly string[] | undefined, selectedValues: readonly string[]): boolean {
-  if (!selectedValues.length) return true;
-  const available = new Set((availableValues ?? []).map(normalizedText));
-  return selectedValues.some((value) => available.has(normalizedText(value)));
-};
-
-const productCollectionCodes = function (product: ProductCard): readonly string[] {
-  return uniqueSorted([...(product.collectionCodes ?? []), ...(product.categoryCodes ?? []).filter((code) => normalizedText(code).includes('sale') || normalizedText(code).includes('arrival'))]);
-};
-
-const productColorCodes = function (product: ProductCard): readonly string[] {
-  return uniqueSorted(productColorOptions(product).map((option) => option.label));
-};
-
-const productSizeCodes = function (product: ProductCard): readonly string[] {
-  return uniqueSorted(productSizeOptions(product).map((size) => size));
+const productCollectionCodes = function (
+  product: ProductCard,
+): readonly string[] {
+  return uniqueSorted([
+    ...(product.collectionCodes ?? []),
+    ...(product.categoryCodes ?? []).filter(
+      (code) =>
+        normalizedText(code).includes("sale") ||
+        normalizedText(code).includes("arrival"),
+    ),
+  ]);
 };
 
 const filterCount = function (filters: ProductFilterState): number {
-  return filters.brands.length +
+  return (
+    filters.brands.length +
     filters.categories.length +
     filters.collections.length +
     filters.colors.length +
@@ -243,33 +495,83 @@ const filterCount = function (filters: ProductFilterState): number {
     filters.availability.length +
     (filters.priceMin.trim() ? 1 : 0) +
     (filters.priceMax.trim() ? 1 : 0) +
-    (filters.saleOnly ? 1 : 0);
+    (filters.saleOnly ? 1 : 0)
+  );
 };
 
-const toggleFilterValue = function (values: readonly string[], value: string): readonly string[] {
-  return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
+const toggleFilterValue = function (
+  values: readonly string[],
+  value: string,
+): readonly string[] {
+  return values.includes(value)
+    ? values.filter((item) => item !== value)
+    : [...values, value];
 };
 const serviceBadgeIcon = function (label: string): LucideIcon {
   const normalizedLabel = label.toLowerCase();
-  if (normalizedLabel.includes('return')) return RotateCcw;
-  if (normalizedLabel.includes('shipping') || normalizedLabel.includes('delivery')) return Truck;
-  if (normalizedLabel.includes('secure') || normalizedLabel.includes('payment') || normalizedLabel.includes('checkout') || normalizedLabel.includes('token')) return ShieldCheck;
-  if (normalizedLabel.includes('help') || normalizedLabel.includes('order') || normalizedLabel.includes('track') || normalizedLabel.includes('lifecycle')) return CircleHelp;
-  if (normalizedLabel.includes('support') || normalizedLabel.includes('service')) return Headphones;
-  if (normalizedLabel.includes('discount') || normalizedLabel.includes('member') || normalizedLabel.includes('loyal')) return BadgePercent;
+  if (normalizedLabel.includes("return")) return RotateCcw;
+  if (
+    normalizedLabel.includes("shipping") ||
+    normalizedLabel.includes("delivery")
+  )
+    return Truck;
+  if (
+    normalizedLabel.includes("secure") ||
+    normalizedLabel.includes("payment") ||
+    normalizedLabel.includes("checkout") ||
+    normalizedLabel.includes("token")
+  )
+    return ShieldCheck;
+  if (
+    normalizedLabel.includes("help") ||
+    normalizedLabel.includes("order") ||
+    normalizedLabel.includes("track") ||
+    normalizedLabel.includes("lifecycle")
+  )
+    return CircleHelp;
+  if (
+    normalizedLabel.includes("support") ||
+    normalizedLabel.includes("service")
+  )
+    return Headphones;
+  if (
+    normalizedLabel.includes("discount") ||
+    normalizedLabel.includes("member") ||
+    normalizedLabel.includes("loyal")
+  )
+    return BadgePercent;
   return CircleHelp;
 };
 
-function selectedHomeProducts(productCodes: readonly string[] | undefined, sourceProducts: readonly ProductCard[], pageSize: number): readonly ProductCard[] {
+function selectedHomeProducts(
+  productCodes: readonly string[] | undefined,
+  sourceProducts: readonly ProductCard[],
+  pageSize: number,
+): readonly ProductCard[] {
   if (!productCodes?.length) return sourceProducts.slice(0, pageSize);
-  const productByCode = new Map(sourceProducts.map((product) => [product.productCode, product]));
-  const selectedProducts = productCodes.map((productCode) => productByCode.get(productCode)).filter((product): product is ProductCard => Boolean(product));
-  if (selectedProducts.length >= pageSize) return selectedProducts.slice(0, pageSize);
-  const selectedCodes = new Set(selectedProducts.map((product) => product.productCode));
-  const fallbackProducts = sourceProducts.filter((product) => !selectedCodes.has(product.productCode));
+  const productByCode = new Map(
+    sourceProducts.map((product) => [product.productCode, product]),
+  );
+  const selectedProducts = productCodes
+    .map((productCode) => productByCode.get(productCode))
+    .filter((product): product is ProductCard => Boolean(product));
+  if (selectedProducts.length >= pageSize)
+    return selectedProducts.slice(0, pageSize);
+  const selectedCodes = new Set(
+    selectedProducts.map((product) => product.productCode),
+  );
+  const fallbackProducts = sourceProducts.filter(
+    (product) => !selectedCodes.has(product.productCode),
+  );
   return [...selectedProducts, ...fallbackProducts].slice(0, pageSize);
 }
-function NodicsBrand({ logoText = 'NODICS', subtitle }: { readonly logoText?: string; readonly subtitle: string }) {
+function NodicsBrand({
+  logoText = "NODICS",
+  subtitle,
+}: {
+  readonly logoText?: string;
+  readonly subtitle: string;
+}) {
   return (
     <span className="agora-brand-lockup">
       <svg className="agora-brand-mark" aria-hidden="true" viewBox="0 0 64 64">
@@ -304,29 +606,53 @@ function NodicsBrand({ logoText = 'NODICS', subtitle }: { readonly logoText?: st
 }
 
 export function StorefrontPage() {
-  const initialCustomerSession = useMemo(() => resolveAgoraCustomerSession(runtimeConfig), []);
+  const initialCustomerSession = useMemo(
+    () => resolveAgoraCustomerSession(runtimeConfig),
+    [],
+  );
   const initialRouteState = useMemo(() => routeStateFromLocation(), []);
-  const [customerSession, setCustomerSession] = useState<CustomerSession>(initialCustomerSession);
+  const [customerSession, setCustomerSession] = useState<CustomerSession>(
+    initialCustomerSession,
+  );
   const [view, setView] = useState<View>(initialRouteState.view);
   const [activeHeroIndex, setActiveHeroIndex] = useState(0);
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [query, setQuery] = useState(initialRouteState.query);
-  const [collectionCode, setCollectionCode] = useState(initialRouteState.collectionCode);
+  const [collectionCode, setCollectionCode] = useState(
+    initialRouteState.collectionCode,
+  );
   const [searchCode, setSearchCode] = useState(initialRouteState.searchCode);
-  const [searchContext, setSearchContext] = useState<ProductSearchContext>(initialRouteState.searchContext);
-  const [brand, setBrand] = useState('');
+  const [searchContext, setSearchContext] = useState<ProductSearchContext>(
+    initialRouteState.searchContext,
+  );
+  const [brand, setBrand] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [listingLayout, setListingLayout] = useState<ProductListingLayout>('grid-4');
-  const [selectedFilters, setSelectedFilters] = useState<ProductFilterState>(EMPTY_PRODUCT_FILTERS);
-  const [sortCode, setSortCode] = useState('recommended');
-  const [listingPage, setListingPage] = useState(1);
+  const [listingLayout, setListingLayout] =
+    useState<ProductListingLayout>("grid-4");
+  const compactListing = useCompactListing();
+  const displayedListingLayout =
+    compactListing && listingLayout !== "list" ? "grid-2" : listingLayout;
+  const [initialListingLocation] = useState(() =>
+    readListingLocation(
+      typeof window === "undefined" ? "" : window.location.search,
+    ),
+  );
+  const [selectedFilters, setSelectedFilters] = useState<ProductFilterState>(
+    initialListingLocation.filters,
+  );
+  const [sortCode, setSortCode] = useState(initialListingLocation.sortCode);
+  const [listingPage, setListingPage] = useState(initialListingLocation.page);
   const [listingHasNextPage, setListingHasNextPage] = useState(false);
   const [products, setProducts] = useState<readonly ProductCard[]>([]);
   const [productTotalCount, setProductTotalCount] = useState<number>();
   const [homeProducts, setHomeProducts] = useState<readonly ProductCard[]>([]);
-  const [facets, setFacets] = useState<Readonly<Record<string, readonly unknown[]>>>({});
+  const [facets, setFacets] = useState<
+    Readonly<Record<string, readonly unknown[]>>
+  >({});
   const [selected, setSelected] = useState<ProductDetail>();
-  const [pendingProductSlug, setPendingProductSlug] = useState<string | undefined>(initialRouteState.productSlug);
+  const [pendingProductSlug, setPendingProductSlug] = useState<
+    string | undefined
+  >(initialRouteState.productSlug);
   const pendingProductSlugLookupRef = useRef<string | undefined>(undefined);
   const [selectedVariantCode, setSelectedVariantCode] = useState<string>();
   const [quickView, setQuickView] = useState<ProductCard>();
@@ -335,95 +661,270 @@ export function StorefrontPage() {
   const [quickAddVariantCode, setQuickAddVariantCode] = useState<string>();
   const [quickAddQuantity, setQuickAddQuantity] = useState(1);
   const [quantity, setQuantity] = useState(1);
-  const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>(initialRouteState.checkoutStep ?? 'customer');
+  const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>(
+    initialRouteState.checkoutStep ?? "customer",
+  );
   const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [accountPanelOpen, setAccountPanelOpen] = useState(false);
   const [confirmation, setConfirmation] = useState<CheckoutPlacementResponse>();
   const [paymentResult, setPaymentResult] = useState<PaymentResultViewModel>();
   const [orderDetail, setOrderDetail] = useState<CustomerOrderDetailResponse>();
-  const [orderHistory, setOrderHistory] = useState<readonly CustomerOrderSummary[]>([]);
+  const [orderHistory, setOrderHistory] = useState<
+    readonly CustomerOrderSummary[]
+  >([]);
   const [selectedOrderCode, setSelectedOrderCode] = useState<string>();
   const [orderHistoryStatus, setOrderHistoryStatus] = useState<string>();
-  const [digitalEntitlements, setDigitalEntitlements] = useState<readonly DigitalEntitlementSummary[]>([]);
+  const [digitalEntitlements, setDigitalEntitlements] = useState<
+    readonly DigitalEntitlementSummary[]
+  >([]);
   const [digitalWalletStatus, setDigitalWalletStatus] = useState<string>();
-  const [revealedCouponTokens, setRevealedCouponTokens] = useState<Readonly<Record<string, string>>>({});
-  const [shippingMethodOptions, setShippingMethodOptions] = useState<readonly ShippingOption[]>(shippingOptions);
-  const [returnMethodOptions, setReturnMethodOptions] = useState<ReturnMethodResponse['methods']>([
-    { code: 'PICKUP', label: 'Pickup', promise: 'Carrier pickup after approval' },
-    { code: 'DROP_OFF', label: 'Drop-off', promise: 'Drop at approved carrier location' },
-    { code: 'STORE_RETURN', label: 'Store return', promise: 'Bring the item to store' },
+  const [revealedCouponTokens, setRevealedCouponTokens] = useState<
+    Readonly<Record<string, string>>
+  >({});
+  const [shippingMethodOptions, setShippingMethodOptions] = useState<
+    readonly ShippingOption[]
+  >([]);
+  const [returnMethodOptions, setReturnMethodOptions] = useState<
+    ReturnMethodResponse["methods"]
+  >([
+    {
+      code: "PICKUP",
+      label: "Pickup",
+      promise: "Carrier pickup after approval",
+    },
+    {
+      code: "DROP_OFF",
+      label: "Drop-off",
+      promise: "Drop at approved carrier location",
+    },
+    {
+      code: "STORE_RETURN",
+      label: "Store return",
+      promise: "Bring the item to store",
+    },
   ]);
-  const [backendCartCode, setBackendCartCode] = useState<string>();
-  const [backendCartRevision, setBackendCartRevision] = useState('0');
-  const [backendEntryCodes, setBackendEntryCodes] = useState<Readonly<Record<string, string>>>({});
-  const [syncStatus, setSyncStatus] = useState('Local cart');
-  const [backendCartCalculation, setBackendCartCalculation] = useState<CartCalculationResponse>();
-  const [wishlistProductCodes, setWishlistProductCodes] = useState<readonly string[]>([]);
-  const [compareProductCodes, setCompareProductCodes] = useState<readonly string[]>([]);
-  const [backendListEntryCodes, setBackendListEntryCodes] = useState<Readonly<Record<StorefrontShoppingListType, Readonly<Record<string, string>>>>>({ WISHLIST: {}, COMPARE: {} });
+  const [backendCartCode, setBackendCartCode] = useState<string | undefined>(
+    () => {
+      if (!customerSession.accessToken) return undefined;
+      try {
+        return (
+          window.localStorage.getItem(
+            `nodics.backendCart.${runtimeConfig.enterpriseCode}.${runtimeConfig.storeCode}.${customerSession.customerId}`,
+          ) ?? undefined
+        );
+      } catch {
+        return undefined;
+      }
+    },
+  );
+  const backendCartCodeRef = useRef(backendCartCode);
+  const [backendCartRevision, setBackendCartRevision] = useState("0");
+  const [backendEntryCodes, setBackendEntryCodes] = useState<
+    Readonly<Record<string, string>>
+  >({});
+  const [syncStatus, setSyncStatus] = useState("");
+  const [backendCartCalculation, setBackendCartCalculation] =
+    useState<CartCalculationResponse>();
+  const [wishlistProductCodes, setWishlistProductCodes] = useState<
+    readonly string[]
+  >([]);
+  const [compareProductCodes, setCompareProductCodes] = useState<
+    readonly string[]
+  >([]);
+  const [backendListEntryCodes, setBackendListEntryCodes] = useState<
+    Readonly<
+      Record<StorefrontShoppingListType, Readonly<Record<string, string>>>
+    >
+  >({ WISHLIST: {}, COMPARE: {} });
   const [listStatus, setListStatus] = useState<string>();
   const [promotionStatus, setPromotionStatus] = useState<string>();
-  const [backendPromotionDiscount, setBackendPromotionDiscount] = useState<number>();
+  const [backendPromotionDiscount, setBackendPromotionDiscount] =
+    useState<number>();
   const [reviewAggregate, setReviewAggregate] = useState<ReviewAggregate>();
-  const [publicReviews, setPublicReviews] = useState<readonly PublicReview[]>([]);
+  const [publicReviews, setPublicReviews] = useState<readonly PublicReview[]>(
+    [],
+  );
   const [reviewStatus, setReviewStatus] = useState<string>();
   const [lifecycleStatus, setLifecycleStatus] = useState<string>();
-  const [lifecyclePreview, setLifecyclePreview] = useState<Readonly<Record<string, unknown>>>();
-  const [selectedLifecycleType, setSelectedLifecycleType] = useState<(typeof lifecycleTypes)[number]>('CANCELLATION');
+  const [lifecyclePreview, setLifecyclePreview] =
+    useState<Readonly<Record<string, unknown>>>();
+  const [selectedLifecycleType, setSelectedLifecycleType] =
+    useState<(typeof lifecycleTypes)[number]>("CANCELLATION");
   const [authStatus, setAuthStatus] = useState<string>();
-  const [authForm, setAuthForm] = useState({ loginId: initialCustomerSession.email, password: '' });
+  const [authForm, setAuthForm] = useState({
+    loginId: initialCustomerSession.email,
+    password: "",
+  });
   const [checkoutForm, setCheckoutForm] = useState({
     email: customerSession.email,
-    firstName: 'Storefront',
-    lastName: 'Customer',
-    phone: '+1 555 0100',
-    line1: '549 Oak St',
-    line2: '',
-    city: 'Crystal Lake',
-    region: 'IL',
-    postalCode: '60014',
-    country: 'US',
-    shippingMethod: 'STANDARD',
-    paymentMethod: 'CARD',
-    cardName: 'Storefront Customer',
-    cardLast4: '4242',
+    firstName: "",
+    lastName: "",
+    phone: "",
+    line1: "",
+    line2: "",
+    city: "",
+    region: "",
+    postalCode: "",
+    country: "AE",
+    shippingMethod: "STANDARD",
+    paymentMethod: "CARD",
+    cardName: "",
+    cardLast4: "4242",
     couponCode: readCheckoutCouponCode(),
   });
   const [lifecycleForm, setLifecycleForm] = useState({
-    reasonCode: 'CUSTOMER_CHANGED_MIND',
-    quantity: '1',
-    returnMethod: 'PICKUP',
-    refundMethod: 'ORIGINAL_PAYMENT',
-    replacementProductCode: '',
-    preferredResolution: 'SHIP_REPLACEMENT',
-    appealReferenceCode: '',
-    appealReason: '',
-    comment: '',
+    reasonCode: "CUSTOMER_CHANGED_MIND",
+    quantity: "1",
+    returnMethod: "PICKUP",
+    refundMethod: "ORIGINAL_PAYMENT",
+    replacementProductCode: "",
+    preferredResolution: "SHIP_REPLACEMENT",
+    appealReferenceCode: "",
+    appealReason: "",
+    comment: "",
   });
   const [error, setError] = useState<string>();
   const [cmsPage, setCmsPage] = useState<CmsResolvedPageContract>();
-  const [cmsExperiencePage, setCmsExperiencePage] = useState<CmsResolvedPageContract>();
+  const [cmsExperiencePage, setCmsExperiencePage] =
+    useState<CmsResolvedPageContract>();
   const [cmsStatus, setCmsStatus] = useState<string>();
   const [activeMegaMenuCode, setActiveMegaMenuCode] = useState<string>();
-  const cart = useLocalCart();
+  const storefrontHeaderRef = useRef<HTMLElement>(null);
+  const [megaMenuTop, setMegaMenuTop] = useState(118);
+  const [draftFilters, setDraftFilters] = useState<ProductFilterState>(
+    EMPTY_PRODUCT_FILTERS,
+  );
+  const cart = useLocalCart(
+    `nodics.cart.${runtimeConfig.enterpriseCode}.${runtimeConfig.storeCode}`,
+  );
+  const cartMutationQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const queueCartMutation = <T,>(operation: () => Promise<T>): Promise<T> => {
+    const result = cartMutationQueue.current
+      .catch(() => undefined)
+      .then(operation);
+    cartMutationQueue.current = result;
+    return result;
+  };
+  useEffect(() => {
+    if (!backendCartCode || !customerSession.accessToken) return;
+    let active = true;
+    void readCart(runtimeConfig, customerSession.accessToken, backendCartCode)
+      .then((response) => {
+        if (!active) return;
+        if (response.cart.status !== "ACTIVE") {
+          cart.clear();
+          backendCartCodeRef.current = undefined;
+          setBackendCartCode(undefined);
+          return;
+        }
+        setBackendCartRevision(String(response.cart.revision ?? "0"));
+        setBackendEntryCodes(
+          Object.fromEntries(
+            response.entries.map((entry) => [cartEntryKey(entry), entry.code]),
+          ),
+        );
+      })
+      .catch(() => {
+        if (active)
+          setError(
+            "Your saved cart could not be refreshed. Please sign in again before checkout.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [customerSession.accessToken]);
+  useEffect(() => {
+    if (!customerSession.accessToken) return;
+    try {
+      const key = `nodics.backendCart.${runtimeConfig.enterpriseCode}.${runtimeConfig.storeCode}.${customerSession.customerId}`;
+      if (backendCartCode) window.localStorage.setItem(key, backendCartCode);
+      else window.localStorage.removeItem(key);
+    } catch {
+      /* Browser storage may be disabled. */
+    }
+  }, [
+    backendCartCode,
+    customerSession.customerId,
+    customerSession.accessToken,
+  ]);
   const collectionCarouselRef = useRef<HTMLElement>(null);
-  const homeContent = useMemo(() => cmsPage ? agoraHomeContent(cmsPage, runtimeConfig) : EMPTY_AGORA_HOME_CONTENT, [cmsPage]);
-  const experienceContent = useMemo(() => cmsExperiencePage ? agoraHomeContent(cmsExperiencePage, runtimeConfig) : EMPTY_AGORA_HOME_CONTENT, [cmsExperiencePage]);
-  const productListingContent = experienceContent.productListing ?? homeContent.productListing;
+  const homeContent = useMemo(
+    () =>
+      cmsPage
+        ? agoraHomeContent(cmsPage, runtimeConfig)
+        : EMPTY_AGORA_HOME_CONTENT,
+    [cmsPage],
+  );
+  const experienceContent = useMemo(
+    () =>
+      cmsExperiencePage
+        ? agoraHomeContent(cmsExperiencePage, runtimeConfig)
+        : EMPTY_AGORA_HOME_CONTENT,
+    [cmsExperiencePage],
+  );
+  const productListingContent =
+    experienceContent.productListing ?? homeContent.productListing;
   const cmsPath = cmsPathForView(view);
   const headerContent = homeContent.header;
   const activeMegaMenu = useMemo(
-    () => headerContent.megaMenus.find((menu) => menu.code === activeMegaMenuCode),
+    () =>
+      headerContent.megaMenus.find((menu) => menu.code === activeMegaMenuCode),
     [activeMegaMenuCode, headerContent.megaMenus],
   );
-  const rootCollectionCode = headerContent.rootCollectionCode ?? homeContent.collections[0]?.code ?? '';
+  const rootCollectionCode =
+    headerContent.rootCollectionCode ?? homeContent.collections[0]?.code ?? "";
   const cmsHeroSlides = homeContent.heroSlides;
   const activeHeroSlide = cmsHeroSlides[activeHeroIndex] ?? cmsHeroSlides[0];
-  const nextHeroSlide = cmsHeroSlides[(activeHeroIndex + 1) % Math.max(cmsHeroSlides.length, 1)] ?? cmsHeroSlides[0];
+  const nextHeroSlide =
+    cmsHeroSlides[(activeHeroIndex + 1) % Math.max(cmsHeroSlides.length, 1)] ??
+    cmsHeroSlides[0];
+
+  useEffect(() => {
+    if (!activeMegaMenuCode) return undefined;
+    const header = storefrontHeaderRef.current;
+    if (!header) return undefined;
+    const alignMenu = () =>
+      setMegaMenuTop(Math.max(0, header.getBoundingClientRect().bottom));
+    alignMenu();
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? undefined
+        : new ResizeObserver(alignMenu);
+    observer?.observe(header);
+    window.addEventListener("scroll", alignMenu, { passive: true });
+    window.addEventListener("resize", alignMenu);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("scroll", alignMenu);
+      window.removeEventListener("resize", alignMenu);
+    };
+  }, [activeMegaMenuCode]);
+
+  useEffect(() => {
+    if (!activeMegaMenuCode) return undefined;
+    const dismissOutside = (event: PointerEvent) => {
+      if (
+        event.target instanceof Element &&
+        !event.target.closest(".storefront-header, .agora-mega-menu")
+      ) {
+        setActiveMegaMenuCode(undefined);
+      }
+    };
+    const dismissOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setActiveMegaMenuCode(undefined);
+    };
+    document.addEventListener("pointerdown", dismissOutside);
+    document.addEventListener("keydown", dismissOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", dismissOutside);
+      document.removeEventListener("keydown", dismissOnEscape);
+    };
+  }, [activeMegaMenuCode]);
 
   useEffect(() => {
     const controller = new AbortController();
-    setCmsStatus('Loading published experience…');
+    setCmsStatus("Loading published experience…");
     void resolveCmsPage({
       cmsBaseUrl: runtimeConfig.cmsBaseUrl,
       enterpriseCode: runtimeConfig.enterpriseCode,
@@ -440,7 +941,7 @@ export function StorefrontPage() {
       })
       .catch(() => {
         if (controller.signal.aborted) return;
-        setCmsStatus('Published Agora experience is not available yet.');
+        setCmsStatus("Published Agora experience is not available yet.");
       });
     return () => controller.abort();
   }, [cmsPath]);
@@ -467,7 +968,9 @@ export function StorefrontPage() {
       signal: controller.signal,
     })
       .then((result) => {
-        setCmsExperiencePage(wcmsExperienceToCmsPage(result, runtimeConfig, cmsPath));
+        setCmsExperiencePage(
+          wcmsExperienceToCmsPage(result, runtimeConfig, cmsPath),
+        );
       })
       .catch(() => {
         if (!controller.signal.aborted) setCmsExperiencePage(undefined);
@@ -495,21 +998,21 @@ export function StorefrontPage() {
   useEffect(() => {
     const updateHeaderState = () => setHeaderScrolled(window.scrollY > 64);
     updateHeaderState();
-    window.addEventListener('scroll', updateHeaderState, { passive: true });
-    return () => window.removeEventListener('scroll', updateHeaderState);
+    window.addEventListener("scroll", updateHeaderState, { passive: true });
+    return () => window.removeEventListener("scroll", updateHeaderState);
   }, []);
 
   useEffect(() => {
     if (!quickAdd) return undefined;
     const previousOverflow = document.body.style.overflow;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setQuickAdd(undefined);
+      if (event.key === "Escape") setQuickAdd(undefined);
     };
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', closeOnEscape);
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
     return () => {
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', closeOnEscape);
+      window.removeEventListener("keydown", closeOnEscape);
     };
   }, [quickAdd]);
 
@@ -517,18 +1020,18 @@ export function StorefrontPage() {
     if (!quickView) return undefined;
     const previousOverflow = document.body.style.overflow;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setQuickView(undefined);
+      if (event.key === "Escape") setQuickView(undefined);
     };
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', closeOnEscape);
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
     return () => {
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', closeOnEscape);
+      window.removeEventListener("keydown", closeOnEscape);
     };
   }, [quickView]);
 
   useEffect(() => {
-    if (view !== 'home' || cmsHeroSlides.length < 2) return undefined;
+    if (view !== "home" || cmsHeroSlides.length < 2) return undefined;
     const intervalId = window.setInterval(() => {
       setActiveHeroIndex((current) => (current + 1) % cmsHeroSlides.length);
     }, 5200);
@@ -536,21 +1039,29 @@ export function StorefrontPage() {
   }, [cmsHeroSlides.length, view]);
 
   useEffect(() => {
-    if (view !== 'home' && view !== 'plp') return undefined;
+    if (view !== "home" && view !== "plp") return undefined;
     let active = true;
     const productDiscoveryInput = {
-      brandCode: searchContext === 'brand' ? searchCode : undefined,
-      categoryCode: searchContext === 'category' ? searchCode || collectionCode : undefined,
-      collectionCode: searchContext === 'collection' ? searchCode || collectionCode : undefined,
+      brandCode: searchContext === "brand" ? searchCode : undefined,
+      categoryCode:
+        searchContext === "category" ? searchCode || collectionCode : undefined,
+      collectionCode:
+        searchContext === "collection"
+          ? searchCode || collectionCode
+          : undefined,
       domainCode: runtimeConfig.domainCode,
       q: query || undefined,
+      filters: JSON.stringify({
+        ...selectedFilters,
+        brands: uniqueSorted([brand, ...selectedFilters.brands]),
+      }),
       sortCode,
       page: String(listingPage),
       pageSize: String(PRODUCT_LISTING_BATCH_SIZE),
     };
     setListingHasNextPage(false);
     void listProducts(runtimeConfig, {
-      ...(view === 'home' || view === 'plp' ? productDiscoveryInput : {}),
+      ...(view === "home" || view === "plp" ? productDiscoveryInput : {}),
     })
       .then(async (response) => {
         const responseProducts = response.products;
@@ -562,7 +1073,12 @@ export function StorefrontPage() {
         if (active) setProducts(responseProducts);
         if (active) setFacets(response.facets ?? {});
         if (active) setProductTotalCount(nextTotalCount);
-        if (!active || nextTotalCount !== undefined || responseProducts.length < PRODUCT_LISTING_BATCH_SIZE) return;
+        if (
+          !active ||
+          nextTotalCount !== undefined ||
+          responseProducts.length < PRODUCT_LISTING_BATCH_SIZE
+        )
+          return;
         const nextPageResponse = await listProducts(runtimeConfig, {
           ...productDiscoveryInput,
           page: String(listingPage + 1),
@@ -570,21 +1086,44 @@ export function StorefrontPage() {
         if (active) setListingHasNextPage(nextPageResponse.products.length > 0);
       })
       .catch((nextError: unknown) => {
-        if (active) setError(nextError instanceof Error ? nextError.message : 'Product discovery failed');
+        if (active)
+          setError(
+            nextError instanceof Error
+              ? nextError.message
+              : "Product discovery failed",
+          );
       });
     return () => {
       active = false;
     };
-  }, [collectionCode, listingPage, query, searchCode, searchContext, sortCode, view]);
+  }, [
+    collectionCode,
+    selectedFilters,
+    brand,
+    listingPage,
+    query,
+    searchCode,
+    searchContext,
+    sortCode,
+    view,
+  ]);
 
   useEffect(() => {
     let active = true;
-    void listProducts(runtimeConfig, { categoryCode: rootCollectionCode || undefined, pageSize: '32' })
+    void listProducts(runtimeConfig, {
+      categoryCode: rootCollectionCode || undefined,
+      pageSize: "32",
+    })
       .then((response) => {
         if (active) setHomeProducts(response.products);
       })
       .catch((nextError: unknown) => {
-        if (active) setError(nextError instanceof Error ? nextError.message : 'Product discovery failed');
+        if (active)
+          setError(
+            nextError instanceof Error
+              ? nextError.message
+              : "Product discovery failed",
+          );
       });
     return () => {
       active = false;
@@ -593,7 +1132,9 @@ export function StorefrontPage() {
 
   useEffect(() => {
     if (!pendingProductSlug || selected?.slug === pendingProductSlug) return;
-    const candidate = [...products, ...homeProducts].find((product) => product.slug === pendingProductSlug);
+    const candidate = [...products, ...homeProducts].find(
+      (product) => product.slug === pendingProductSlug,
+    );
     if (candidate) {
       setPendingProductSlug(undefined);
       pendingProductSlugLookupRef.current = undefined;
@@ -606,14 +1147,21 @@ export function StorefrontPage() {
     void listProducts(runtimeConfig, {
       domainCode: runtimeConfig.domainCode,
       q: productSlugSearchTerm(pendingProductSlug),
-      pageSize: '50',
+      pageSize: "50",
     })
       .then((response) => {
         if (!active) return;
-        const discovered = response.products.find((product) => product.slug === pendingProductSlug || normalizedText(product.productCode) === normalizedText(pendingProductSlug));
+        const discovered = response.products.find(
+          (product) =>
+            product.slug === pendingProductSlug ||
+            normalizedText(product.productCode) ===
+              normalizedText(pendingProductSlug),
+        );
         if (!discovered) {
           pendingProductSlugLookupRef.current = undefined;
-          setError('Product link could not be resolved from current discovery index.');
+          setError(
+            "Product link could not be resolved from current discovery index.",
+          );
           return;
         }
         setPendingProductSlug(undefined);
@@ -623,11 +1171,16 @@ export function StorefrontPage() {
       .catch((nextError: unknown) => {
         if (!active) return;
         pendingProductSlugLookupRef.current = undefined;
-        setError(nextError instanceof Error ? nextError.message : 'Product link could not be resolved');
+        setError(
+          nextError instanceof Error
+            ? nextError.message
+            : "Product link could not be resolved",
+        );
       });
     return () => {
       active = false;
-      if (pendingProductSlugLookupRef.current === pendingProductSlug) pendingProductSlugLookupRef.current = undefined;
+      if (pendingProductSlugLookupRef.current === pendingProductSlug)
+        pendingProductSlugLookupRef.current = undefined;
     };
   }, [homeProducts, pendingProductSlug, products, selected?.slug]);
 
@@ -635,10 +1188,27 @@ export function StorefrontPage() {
     let active = true;
     void listShippingMethods(runtimeConfig)
       .then((response) => {
-        if (active) setShippingMethodOptions(normalizeShippingOptions(response.methods as readonly Partial<ShippingOption>[]));
+        if (!active) return;
+        const methods = normalizeShippingOptions(
+          response.methods as readonly Partial<ShippingOption>[],
+        ).filter((method) => method.currency === runtimeConfig.currency);
+        setShippingMethodOptions(methods);
+        setCheckoutForm((current) => ({
+          ...current,
+          shippingMethod: methods.some(
+            (method) => method.code === current.shippingMethod,
+          )
+            ? current.shippingMethod
+            : (methods[0]?.code ?? ""),
+        }));
       })
       .catch(() => {
-        if (active) setShippingMethodOptions(shippingOptions);
+        if (active) {
+          setShippingMethodOptions([]);
+          setError(
+            "Delivery options could not be loaded. Please refresh and try again.",
+          );
+        }
       });
     return () => {
       active = false;
@@ -649,7 +1219,8 @@ export function StorefrontPage() {
     let active = true;
     void listReturnMethods(runtimeConfig)
       .then((response) => {
-        if (active && response.methods.length) setReturnMethodOptions(response.methods);
+        if (active && response.methods.length)
+          setReturnMethodOptions(response.methods);
       })
       .catch(() => undefined);
     return () => {
@@ -657,26 +1228,43 @@ export function StorefrontPage() {
     };
   }, []);
 
-  const openProduct = (productCode: string) => {
+  const openProduct = (productCode: string, preferredVariantCode?: string) => {
     setError(undefined);
     void getProduct(runtimeConfig, productCode)
       .then((response) => {
         setSelected(response.product);
-        setSelectedVariantCode(response.product.defaultVariantCode ?? response.product.variantCodes?.[0]);
+        setSelectedVariantCode(
+          preferredVariantCode &&
+            response.product.variantCodes?.includes(preferredVariantCode)
+            ? preferredVariantCode
+            : (response.product.defaultVariantCode ??
+                response.product.variantCodes?.[0]),
+        );
         setQuantity(1);
-        setView('pdp');
-        if (typeof window !== 'undefined' && response.product.slug) {
-          window.history.pushState({}, '', `/products/${encodeURIComponent(response.product.slug)}`);
+        setQuickView(undefined);
+        setQuickAdd(undefined);
+        setView("pdp");
+        if (typeof window !== "undefined" && response.product.slug) {
+          window.history.pushState(
+            {},
+            "",
+            `/products/${encodeURIComponent(response.product.slug)}`,
+          );
         }
         void loadProductReviews(response.product.productCode);
       })
       .catch((nextError: unknown) => {
-        setError(nextError instanceof Error ? nextError.message : 'Product detail failed');
+        setError(
+          nextError instanceof Error
+            ? nextError.message
+            : "Product detail failed",
+        );
       });
   };
 
   const openQuickView = (product: ProductCard) => {
-    const initialVariantCode = product.defaultVariantCode ?? product.variantCodes?.[0];
+    const initialVariantCode =
+      product.defaultVariantCode ?? product.variantCodes?.[0];
     setQuickView(product);
     setQuickViewVariantCode(initialVariantCode);
     void getProduct(runtimeConfig, product.productCode)
@@ -691,13 +1279,18 @@ export function StorefrontPage() {
           price: response.product.price ?? product.price,
           summary: response.product.summary ?? product.summary,
         });
-        setQuickViewVariantCode(response.product.defaultVariantCode ?? response.product.variantCodes?.[0] ?? initialVariantCode);
+        setQuickViewVariantCode(
+          response.product.defaultVariantCode ??
+            response.product.variantCodes?.[0] ??
+            initialVariantCode,
+        );
       })
       .catch(() => setQuickView(product));
   };
 
   const openQuickAdd = (product: ProductCard, variantCode?: string) => {
-    const initialVariantCode = variantCode ?? product.defaultVariantCode ?? product.variantCodes?.[0];
+    const initialVariantCode =
+      variantCode ?? product.defaultVariantCode ?? product.variantCodes?.[0];
     setQuickAdd(product);
     setQuickAddVariantCode(initialVariantCode);
     setQuickAddQuantity(1);
@@ -713,25 +1306,38 @@ export function StorefrontPage() {
           price: response.product.price ?? product.price,
           summary: response.product.summary ?? product.summary,
         });
-        setQuickAddVariantCode(variantCode ?? response.product.defaultVariantCode ?? response.product.variantCodes?.[0] ?? initialVariantCode);
+        setQuickAddVariantCode(
+          variantCode ??
+            response.product.defaultVariantCode ??
+            response.product.variantCodes?.[0] ??
+            initialVariantCode,
+        );
       })
       .catch(() => setQuickAdd(product));
   };
 
   const selectQuickAddColour = function (colourCode: string) {
-    setQuickAddVariantCode(productVariantForSelection(quickAdd, colourCode, quickAddSizeCode));
+    setQuickAddVariantCode(
+      productVariantForSelection(quickAdd, colourCode, quickAddSizeCode),
+    );
   };
 
   const selectQuickAddSize = function (sizeCode: string) {
-    setQuickAddVariantCode(productVariantForSelection(quickAdd, quickAddColourCode, sizeCode));
+    setQuickAddVariantCode(
+      productVariantForSelection(quickAdd, quickAddColourCode, sizeCode),
+    );
   };
 
   const selectQuickViewColour = function (colourCode: string) {
-    setQuickViewVariantCode(productVariantForSelection(quickView, colourCode, quickViewSizeCode));
+    setQuickViewVariantCode(
+      productVariantForSelection(quickView, colourCode, quickViewSizeCode),
+    );
   };
 
   const selectQuickViewSize = function (sizeCode: string) {
-    setQuickViewVariantCode(productVariantForSelection(quickView, quickViewColourCode, sizeCode));
+    setQuickViewVariantCode(
+      productVariantForSelection(quickView, quickViewColourCode, sizeCode),
+    );
   };
 
   const addQuickAddToCart = function (buyNow = false) {
@@ -739,55 +1345,61 @@ export function StorefrontPage() {
     addToCart(quickAdd, quickAddQuantity, quickAddSelection.variantCode);
     setQuickAdd(undefined);
     if (buyNow) {
-      setCheckoutStep('customer');
-      setView('checkout');
-      if (typeof window !== 'undefined') window.history.pushState({}, '', '/checkout');
+      setCheckoutStep("customer");
+      setView("checkout");
+      if (typeof window !== "undefined")
+        window.history.pushState({}, "", "/checkout");
     }
   };
 
   const openCollectionsIndex = function () {
-    setView('collections');
-    if (typeof window !== 'undefined') window.history.pushState({}, '', '/collections');
+    setView("collections");
+    if (typeof window !== "undefined")
+      window.history.pushState({}, "", "/collections");
   };
 
-  const updateProductFilter = function (key: keyof ProductFilterState, value: string | boolean | readonly string[]) {
+  const updateProductFilter = function (
+    key: keyof ProductFilterState,
+    value: string | boolean | readonly string[],
+  ) {
     setListingPage(1);
     setSelectedFilters((current) => ({ ...current, [key]: value }));
   };
 
-  const toggleProductFilter = function (key: ProductFilterKey, value: string) {
-    setListingPage(1);
-    setSelectedFilters((current) => ({ ...current, [key]: toggleFilterValue(current[key], value) }));
-  };
-
   const clearProductFilters = function () {
-    setBrand('');
+    setBrand("");
     setListingPage(1);
     setSelectedFilters(EMPTY_PRODUCT_FILTERS);
   };
 
-  const openProductListing = function (context: ProductSearchContext = 'all', code = '') {
+  const openProductListing = function (
+    context: ProductSearchContext = "all",
+    code = "",
+  ) {
     const params = new URLSearchParams();
-    if (query) params.set('q', query);
-    if (context === 'brand' && code) params.set('brand', code);
-    if (context === 'category' && code) params.set('category', code);
-    if (context === 'collection' && code) params.set('collection', code);
+    if (query) params.set("q", query);
+    if (context === "brand" && code) params.set("brand", code);
+    if (context === "category" && code) params.set("category", code);
+    if (context === "collection" && code) params.set("collection", code);
     setSearchContext(context);
     setSearchCode(code);
-    if (context === 'category' || context === 'collection') setCollectionCode(code);
-    setBrand('');
+    if (context === "category" || context === "collection")
+      setCollectionCode(code);
+    setBrand("");
     setSelectedFilters(EMPTY_PRODUCT_FILTERS);
     setListingPage(1);
-    setView('plp');
-    if (typeof window !== 'undefined') {
-      const nextPath = params.toString() ? `/shop?${params.toString()}` : '/shop';
-      window.history.pushState({}, '', nextPath);
+    setView("plp");
+    if (typeof window !== "undefined") {
+      const nextPath = params.toString()
+        ? `/shop?${params.toString()}`
+        : "/shop";
+      window.history.pushState({}, "", nextPath);
     }
   };
 
   const openCollection = (code: string) => {
     if (!code) return;
-    openProductListing('collection', code);
+    openProductListing("collection", code);
   };
 
   const openCollectionTile = function (collection: AgoraCollectionTile) {
@@ -797,113 +1409,189 @@ export function StorefrontPage() {
     }
     openCollection(collection.code);
   };
-  const scrollCollectionCarousel = function (direction: 'previous' | 'next') {
+  const scrollCollectionCarousel = function (direction: "previous" | "next") {
     const collectionRail = collectionCarouselRef.current;
     if (!collectionRail) return;
     const scrollDistance = Math.max(collectionRail.clientWidth * 0.72, 280);
     collectionRail.scrollBy({
-      behavior: 'smooth',
-      left: direction === 'next' ? scrollDistance : -scrollDistance,
+      behavior: "smooth",
+      left: direction === "next" ? scrollDistance : -scrollDistance,
     });
   };
 
   const ensureBackendCart = async (session = customerSession) => {
-    if (backendCartCode) return backendCartCode;
+    if (backendCartCodeRef.current) return backendCartCodeRef.current;
     if (!session.accessToken) {
-      setSyncStatus('Local cart fallback; customer session unavailable');
+      setSyncStatus("Local cart fallback; customer session unavailable");
       return undefined;
     }
     const response = await createCart(runtimeConfig, session.accessToken);
+    backendCartCodeRef.current = response.cart.code;
     setBackendCartCode(response.cart.code);
-    setBackendCartRevision(String(response.cart.revision ?? '0'));
-    setSyncStatus(`Backend cart ${response.cart.code}`);
+    setBackendCartRevision(String(response.cart.revision ?? "0"));
+    setSyncStatus("Cart ready");
     return response.cart.code;
   };
 
-  const addToCart = (product: ProductCard, quantityToAdd = 1, variantCode = product.defaultVariantCode ?? product.variantCodes?.[0]) => {
-    cart.add(product, quantityToAdd, variantCode);
+  const addToCart = (
+    product: ProductCard,
+    quantityToAdd = 1,
+    variantCode = product.defaultVariantCode ?? product.variantCodes?.[0],
+  ) => {
+    const nextQuantity = cart.add(product, quantityToAdd, variantCode);
     setBackendCartCalculation(undefined);
-    void ensureBackendCart()
-      .then((cartCode) => cartCode && customerSession.accessToken ? addCartEntry(runtimeConfig, customerSession.accessToken, cartCode, {
-        productCode: product.productCode,
-        variantCode,
-        quantity: String(quantityToAdd),
-      }) : undefined)
+    void queueCartMutation(async () => {
+      const cartCode = await ensureBackendCart();
+      return cartCode && customerSession.accessToken
+        ? addCartEntry(runtimeConfig, customerSession.accessToken, cartCode, {
+            productCode: product.productCode,
+            variantCode,
+            quantity: String(nextQuantity),
+          })
+        : undefined;
+    })
       .then((response) => {
         if (!response) return;
         setBackendCartCode(response.cart.code);
-        setBackendCartRevision(String(response.cart.revision ?? backendCartRevision));
-        const entry = response.entries.find((item) => item.productCode === product.productCode);
-        if (entry) setBackendEntryCodes((current) => ({ ...current, [product.productCode]: entry.code }));
-        setSyncStatus(`Backend cart ${response.cart.code} synced`);
+        setBackendCartRevision(
+          String(response.cart.revision ?? backendCartRevision),
+        );
+        const entry = response.entries.find(
+          (item) =>
+            item.productCode === product.productCode &&
+            item.variantCode === variantCode,
+        );
+        if (entry)
+          setBackendEntryCodes((current) => ({
+            ...current,
+            [cartEntryKey({ productCode: product.productCode, variantCode })]:
+              entry.code,
+          }));
+        setSyncStatus("Cart saved");
       })
-      .catch(() => setSyncStatus('Local cart fallback; backend cart unavailable'));
+      .catch(() =>
+        setSyncStatus(
+          "Your items are saved on this device. We could not sync your cart; please try again.",
+        ),
+      );
   };
 
-  const mergeShoppingList = (listType: StorefrontShoppingListType, entries: readonly ShoppingListEntry[]) => {
+  const mergeShoppingList = (
+    listType: StorefrontShoppingListType,
+    entries: readonly ShoppingListEntry[],
+  ) => {
     const productCodes = entries.map((entry) => entry.productCode);
-    const entryCodes = entries.reduce<Record<string, string>>((result, entry) => {
-      result[entry.productCode] = entry.code;
-      return result;
-    }, {});
-    if (listType === 'WISHLIST') setWishlistProductCodes(productCodes);
+    const entryCodes = entries.reduce<Record<string, string>>(
+      (result, entry) => {
+        result[entry.productCode] = entry.code;
+        return result;
+      },
+      {},
+    );
+    if (listType === "WISHLIST") setWishlistProductCodes(productCodes);
     else setCompareProductCodes(productCodes.slice(0, 4));
-    setBackendListEntryCodes((current) => ({ ...current, [listType]: { ...current[listType], ...entryCodes } }));
+    setBackendListEntryCodes((current) => ({
+      ...current,
+      [listType]: { ...current[listType], ...entryCodes },
+    }));
   };
 
   const syncShoppingListsFromBackend = async (session: CustomerSession) => {
     if (!session.accessToken) return;
     try {
       const [wishlist, compare] = await Promise.all([
-        readShoppingList(runtimeConfig, session.accessToken, 'WISHLIST'),
-        readShoppingList(runtimeConfig, session.accessToken, 'COMPARE'),
+        readShoppingList(runtimeConfig, session.accessToken, "WISHLIST"),
+        readShoppingList(runtimeConfig, session.accessToken, "COMPARE"),
       ]);
-      mergeShoppingList('WISHLIST', wishlist.entries);
-      mergeShoppingList('COMPARE', compare.entries);
-      setListStatus(`Backend wishlist and compare synced for ${session.email}`);
+      mergeShoppingList("WISHLIST", wishlist.entries);
+      mergeShoppingList("COMPARE", compare.entries);
+      setListStatus("Your saved items are up to date");
     } catch {
-      setListStatus('Local wishlist and compare fallback; backend lists unavailable');
+      setListStatus(
+        "Local wishlist and compare fallback; backend lists unavailable",
+      );
     }
   };
 
-  const toggleShoppingList = (listType: StorefrontShoppingListType, product: ProductCard, updateLocal: (current: readonly string[], exists: boolean) => readonly string[], label: string) => {
-    const currentCodes = listType === 'WISHLIST' ? wishlistProductCodes : compareProductCodes;
+  const toggleShoppingList = (
+    listType: StorefrontShoppingListType,
+    product: ProductCard,
+    updateLocal: (
+      current: readonly string[],
+      exists: boolean,
+    ) => readonly string[],
+    label: string,
+  ) => {
+    const currentCodes =
+      listType === "WISHLIST" ? wishlistProductCodes : compareProductCodes;
     const exists = currentCodes.includes(product.productCode);
     const nextCodes = updateLocal(currentCodes, exists);
-    if (listType === 'WISHLIST') setWishlistProductCodes(nextCodes);
+    if (listType === "WISHLIST") setWishlistProductCodes(nextCodes);
     else setCompareProductCodes(nextCodes);
 
-    const localMessage = `${product.name ?? product.productCode} ${exists ? 'removed from' : 'added to'} local ${label}`;
+    const localMessage = `${product.name ?? product.productCode} ${exists ? "removed from" : "added to"} local ${label}`;
     if (!customerSession.accessToken) {
       setListStatus(localMessage);
       return;
     }
 
-    const backendEntryCode = backendListEntryCodes[listType][product.productCode];
-    const backendAction = exists && backendEntryCode
-      ? removeShoppingListEntry(runtimeConfig, customerSession.accessToken, listType, backendEntryCode)
-      : !exists
-        ? addShoppingListEntry(runtimeConfig, customerSession.accessToken, listType, { productCode: product.productCode, variantCode: product.defaultVariantCode ?? product.variantCodes?.[0] })
-        : Promise.resolve(undefined);
+    const backendEntryCode =
+      backendListEntryCodes[listType][product.productCode];
+    const backendAction =
+      exists && backendEntryCode
+        ? removeShoppingListEntry(
+            runtimeConfig,
+            customerSession.accessToken,
+            listType,
+            backendEntryCode,
+          )
+        : !exists
+          ? addShoppingListEntry(
+              runtimeConfig,
+              customerSession.accessToken,
+              listType,
+              {
+                productCode: product.productCode,
+                variantCode:
+                  product.defaultVariantCode ?? product.variantCodes?.[0],
+              },
+            )
+          : Promise.resolve(undefined);
 
     void backendAction
       .then((response) => {
         if (response) mergeShoppingList(listType, response.entries);
-        setListStatus(`${product.name ?? product.productCode} ${exists ? 'removed from' : 'added to'} backend ${label}`);
+        setListStatus(
+          `${product.name ?? product.productCode} ${exists ? "removed from" : "added to"} ${label}`,
+        );
       })
       .catch(() => setListStatus(localMessage));
   };
 
   const toggleWishlist = (product: ProductCard) => {
-    toggleShoppingList('WISHLIST', product, (current, exists) => {
-      return exists ? current.filter((code) => code !== product.productCode) : [product.productCode, ...current];
-    }, 'wishlist');
+    toggleShoppingList(
+      "WISHLIST",
+      product,
+      (current, exists) => {
+        return exists
+          ? current.filter((code) => code !== product.productCode)
+          : [product.productCode, ...current];
+      },
+      "wishlist",
+    );
   };
 
   const toggleCompare = (product: ProductCard) => {
-    toggleShoppingList('COMPARE', product, (current, exists) => {
-      return exists ? current.filter((code) => code !== product.productCode) : [product.productCode, ...current].slice(0, 4);
-    }, 'compare');
+    toggleShoppingList(
+      "COMPARE",
+      product,
+      (current, exists) => {
+        return exists
+          ? current.filter((code) => code !== product.productCode)
+          : [product.productCode, ...current].slice(0, 4);
+      },
+      "compare",
+    );
   };
 
   const syncLocalCartToBackend = async (session: CustomerSession) => {
@@ -913,31 +1601,43 @@ export function StorefrontPage() {
     let latestRevision = backendCartRevision;
     const nextEntryCodes: Record<string, string> = {};
     for (const entry of cart.entries) {
-      const response = await addCartEntry(runtimeConfig, session.accessToken, cartCode, {
-        productCode: entry.productCode,
-        variantCode: entry.variantCode,
-        quantity: String(entry.quantity),
-      });
+      const response = await addCartEntry(
+        runtimeConfig,
+        session.accessToken,
+        cartCode,
+        {
+          productCode: entry.productCode,
+          variantCode: entry.variantCode,
+          quantity: String(entry.quantity),
+        },
+      );
       latestRevision = String(response.cart.revision ?? latestRevision);
-      const backendEntry = response.entries.find((item) => item.productCode === entry.productCode);
-      if (backendEntry) nextEntryCodes[entry.productCode] = backendEntry.code;
+      const backendEntry = response.entries.find(
+        (item) => cartEntryKey(item) === cartEntryKey(entry),
+      );
+      if (backendEntry) nextEntryCodes[cartEntryKey(entry)] = backendEntry.code;
     }
     setBackendCartRevision(latestRevision);
     setBackendEntryCodes((current) => ({ ...current, ...nextEntryCodes }));
-    setSyncStatus(`Backend cart ${cartCode} synced from local cart`);
+    setSyncStatus("Cart saved to your account");
   };
 
   const signIn = async () => {
-    setAuthStatus('Signing in…');
+    setAuthStatus("Signing in…");
     setError(undefined);
     try {
       const response = await authenticateCustomer(runtimeConfig, authForm);
       const accessToken = customerAccessToken(response);
-      if (!accessToken) throw new Error('Customer authentication returned no access token');
+      if (!accessToken)
+        throw new Error("Customer authentication returned no access token");
       const nextSession: CustomerSession = {
         accessToken,
-        mode: 'authenticated',
-        customerId: response.customerId || response.code || response.loginId || authForm.loginId,
+        mode: "authenticated",
+        customerId:
+          response.customerId ||
+          response.code ||
+          response.loginId ||
+          authForm.loginId,
         email: response.email || authForm.loginId,
       };
       saveAgoraCustomerSession(nextSession);
@@ -949,26 +1649,42 @@ export function StorefrontPage() {
       await loadCouponWallet(nextSession);
     } catch (nextError) {
       setAuthStatus(undefined);
-      setError(nextError instanceof Error ? nextError.message : 'Customer sign-in failed');
+      setError(
+        nextError instanceof Error
+          ? nextError.message
+          : "Customer sign-in failed",
+      );
     }
   };
 
   const signOut = () => {
+    cart.clear();
+    backendCartCodeRef.current = undefined;
+    try {
+      window.localStorage.removeItem(
+        `nodics.backendCart.${runtimeConfig.enterpriseCode}.${runtimeConfig.storeCode}.${customerSession.customerId}`,
+      );
+    } catch {
+      /* Storage may be blocked. */
+    }
     clearAgoraCustomerSession();
-    const nextSession = resolveAgoraCustomerSession({ ...runtimeConfig, customerAccessToken: undefined });
+    const nextSession = resolveAgoraCustomerSession({
+      ...runtimeConfig,
+      customerAccessToken: undefined,
+    });
     setCustomerSession(nextSession);
     setBackendCartCode(undefined);
-    setBackendCartRevision('0');
+    setBackendCartRevision("0");
     setBackendEntryCodes({});
     setBackendCartCalculation(undefined);
     setBackendListEntryCodes({ WISHLIST: {}, COMPARE: {} });
     setDigitalEntitlements([]);
     setRevealedCouponTokens({});
-    saveCheckoutCouponCode('');
-    setCheckoutForm((current) => ({ ...current, couponCode: '' }));
+    saveCheckoutCouponCode("");
+    setCheckoutForm((current) => ({ ...current, couponCode: "" }));
     setDigitalWalletStatus(undefined);
-    setSyncStatus('Local cart fallback; signed out');
-    setAuthStatus('Signed out');
+    setSyncStatus("Local cart fallback; signed out");
+    setAuthStatus("Signed out");
   };
 
   const removeFromCart = (productCode: string) => {
@@ -976,12 +1692,23 @@ export function StorefrontPage() {
     setBackendCartCalculation(undefined);
     const entryCode = backendEntryCodes[productCode];
     if (!backendCartCode || !entryCode || !customerSession.accessToken) return;
-    void removeCartEntry(runtimeConfig, customerSession.accessToken, backendCartCode, entryCode)
+    void removeCartEntry(
+      runtimeConfig,
+      customerSession.accessToken,
+      backendCartCode,
+      entryCode,
+    )
       .then((response) => {
-        setBackendCartRevision(String(response.cart.revision ?? backendCartRevision));
-        setSyncStatus(`Backend cart ${response.cart.code} synced`);
+        setBackendCartRevision(
+          String(response.cart.revision ?? backendCartRevision),
+        );
+        setSyncStatus("Cart saved");
       })
-      .catch(() => setSyncStatus('Local remove applied; backend cart unavailable'));
+      .catch(() =>
+        setSyncStatus(
+          "Removed on this device. We could not update your account cart; please try again.",
+        ),
+      );
   };
 
   const addSelectedToCart = () => {
@@ -990,7 +1717,7 @@ export function StorefrontPage() {
   };
 
   const loadProductReviews = async (productCode: string) => {
-    setReviewStatus('Loading reviews…');
+    setReviewStatus("Loading reviews…");
     try {
       const [aggregate, page] = await Promise.all([
         getReviewAggregate(runtimeConfig, productCode),
@@ -998,11 +1725,17 @@ export function StorefrontPage() {
       ]);
       setReviewAggregate(aggregate);
       setPublicReviews(page.items);
-      setReviewStatus(page.items.length ? `${page.items.length} review(s) loaded` : 'No published reviews yet.');
+      setReviewStatus(
+        page.items.length
+          ? `${page.items.length} review(s) loaded`
+          : "No published reviews yet.",
+      );
     } catch {
       setReviewAggregate(undefined);
       setPublicReviews([]);
-      setReviewStatus('Reviews unavailable; Engagement API is optional for local storefront preview.');
+      setReviewStatus(
+        "Reviews unavailable; Engagement API is optional for local storefront preview.",
+      );
     }
   };
 
@@ -1016,16 +1749,28 @@ export function StorefrontPage() {
       removeFromCart(productCode);
       return;
     }
-    void updateCartEntry(runtimeConfig, customerSession.accessToken, backendCartCode, entryCode, String(safeQuantity))
+    void updateCartEntry(
+      runtimeConfig,
+      customerSession.accessToken,
+      backendCartCode,
+      entryCode,
+      String(safeQuantity),
+    )
       .then((response) => {
-        setBackendCartRevision(String(response.cart.revision ?? backendCartRevision));
-        setSyncStatus(`Backend cart ${response.cart.code} synced`);
+        setBackendCartRevision(
+          String(response.cart.revision ?? backendCartRevision),
+        );
+        setSyncStatus("Cart saved");
       })
-      .catch(() => setSyncStatus('Local quantity update applied; backend cart unavailable'));
+      .catch(() =>
+        setSyncStatus(
+          "Quantity changed on this device. We could not update your account cart; please try again.",
+        ),
+      );
   };
 
   const updateCheckout = (field: keyof typeof checkoutForm, value: string) => {
-    if (field === 'couponCode') saveCheckoutCouponCode(value);
+    if (field === "couponCode") saveCheckoutCouponCode(value);
     setCheckoutForm((current) => ({ ...current, [field]: value }));
   };
 
@@ -1035,7 +1780,7 @@ export function StorefrontPage() {
       cartCode,
       subtotal: cart.subtotal.toFixed(2),
       productCodes: cart.entries.map((entry) => entry.productCode),
-      currency: 'USD',
+      currency: runtimeConfig.currency,
       ...(couponCode ? { couponCode } : {}),
     };
   };
@@ -1049,13 +1794,29 @@ export function StorefrontPage() {
       setBackendCartCalculation(undefined);
       return undefined;
     }
-    const calculation = await calculateCart(runtimeConfig, session.accessToken, cartCode, revision, checkoutForm.couponCode.trim() || undefined);
-    setBackendCartRevision(String(calculation.cart?.revision ?? calculation.revision ?? revision));
+    const calculation = await calculateCart(
+      runtimeConfig,
+      session.accessToken,
+      cartCode,
+      revision,
+      checkoutForm.couponCode.trim() || undefined,
+    );
+    setBackendCartRevision(
+      String(calculation.cart?.revision ?? calculation.revision ?? revision),
+    );
     setBackendCartCalculation(calculation);
-    const calculatedDiscount = Number(calculation.discountAmount ?? calculation.decisions?.discount?.discountAmount ?? 0);
+    const calculatedDiscount = Number(
+      calculation.discountAmount ??
+        calculation.decisions?.discount?.discountAmount ??
+        0,
+    );
     if (Number.isFinite(calculatedDiscount) && calculatedDiscount > 0) {
       setBackendPromotionDiscount(calculatedDiscount);
-      setPromotionStatus(calculation.decisions?.discount?.promotionCode ? `Backend promotion calculation ${calculation.decisions.discount.promotionCode}` : 'Backend promotion calculated');
+      setPromotionStatus(
+        calculation.decisions?.discount?.promotionCode
+          ? `Backend promotion calculation ${calculation.decisions.discount.promotionCode}`
+          : "Backend promotion calculated",
+      );
     }
     return calculation;
   };
@@ -1066,13 +1827,27 @@ export function StorefrontPage() {
       return;
     }
     try {
-      const response = await previewPromotion(runtimeConfig, session.accessToken, promotionPayload(backendCartCode));
-      const amount = Number(response.decisions?.[0]?.discountAmount ?? response.selected[0]?.actions?.discountAmount ?? 0);
-      setBackendPromotionDiscount(Number.isFinite(amount) && amount > 0 ? amount : undefined);
-      setPromotionStatus(response.selected[0]?.code ? `Backend promotion preview ${response.selected[0].code}` : 'No backend promotion available');
+      const response = await previewPromotion(
+        runtimeConfig,
+        session.accessToken,
+        promotionPayload(backendCartCode),
+      );
+      const amount = Number(
+        response.decisions?.[0]?.discountAmount ??
+          response.selected[0]?.actions?.discountAmount ??
+          0,
+      );
+      setBackendPromotionDiscount(
+        Number.isFinite(amount) && amount > 0 ? amount : undefined,
+      );
+      setPromotionStatus(
+        response.selected[0]?.code ? "An eligible offer is available" : "",
+      );
     } catch {
       setBackendPromotionDiscount(undefined);
-      setPromotionStatus('Local promotion estimate; backend preview unavailable');
+      setPromotionStatus(
+        "Offers could not be checked. Please try again before placing your order.",
+      );
     }
   };
 
@@ -1082,14 +1857,23 @@ export function StorefrontPage() {
       return;
     }
     void refreshPromotionPreview();
-  }, [customerSession.accessToken, backendCartCode, cart.subtotal, cart.entries.length, checkoutForm.couponCode]);
+  }, [
+    customerSession.accessToken,
+    backendCartCode,
+    cart.subtotal,
+    cart.entries.length,
+    checkoutForm.couponCode,
+  ]);
 
   const checkoutValidation = () => {
     return validateCheckoutSnapshot(checkoutForm, shippingMethodOptions);
   };
 
   const paymentProviderToken = () => {
-    return checkoutPaymentProviderToken(checkoutForm.paymentMethod, checkoutForm.cardLast4);
+    return checkoutPaymentProviderToken(
+      checkoutForm.paymentMethod,
+      checkoutForm.cardLast4,
+    );
   };
 
   const placeOrder = async () => {
@@ -1100,19 +1884,27 @@ export function StorefrontPage() {
       return;
     }
     if (!customerSession.accessToken) {
-      setCheckoutStep('customer');
-      setError('Sign in before placing a live order.');
+      setCheckoutStep("customer");
+      setError("Sign in before placing a live order.");
       return;
     }
     setCheckoutBusy(true);
     setError(undefined);
     const nextOrderCode = orderCode();
-    const cartCode = backendCartCode ?? `local-${cart.entries.map((entry) => entry.productCode).join('-') || 'empty'}`;
+    const cartCode =
+      backendCartCode ??
+      `local-${cart.entries.map((entry) => entry.productCode).join("-") || "empty"}`;
     if (backendCartCode && customerSession.accessToken) {
       try {
-        await refreshBackendCartCalculation(backendCartCode, backendCartRevision, customerSession);
+        await refreshBackendCartCalculation(
+          backendCartCode,
+          backendCartRevision,
+          customerSession,
+        );
       } catch {
-        setSyncStatus('Backend calculation unavailable; using visible cart total');
+        setSyncStatus(
+          "Your order total could not be confirmed. Please try again.",
+        );
       }
     }
     try {
@@ -1120,162 +1912,271 @@ export function StorefrontPage() {
       const response = await placeCheckout(
         runtimeConfig,
         customerSession.accessToken,
-        Object.assign({
-          cartCode,
-          orderCode: nextOrderCode,
-          calculationCode: `calc-${cartCode}`,
-          expectedCartRevision: backendCartRevision,
-          providerToken: paymentProviderToken(),
-          customer: {
-            email: checkoutForm.email,
-            firstName: checkoutForm.firstName,
-            lastName: checkoutForm.lastName,
-            phone: checkoutForm.phone,
+        Object.assign(
+          {
+            cartCode,
+            orderCode: nextOrderCode,
+            calculationCode: `calc-${cartCode}`,
+            expectedCartRevision: backendCartRevision,
+            providerToken: paymentProviderToken(),
+            customer: {
+              email: checkoutForm.email,
+              firstName: checkoutForm.firstName,
+              lastName: checkoutForm.lastName,
+              phone: checkoutForm.phone,
+            },
+            shippingAddress: {
+              line1: checkoutForm.line1,
+              line2: checkoutForm.line2,
+              city: checkoutForm.city,
+              region: checkoutForm.region,
+              postalCode: checkoutForm.postalCode,
+              country: checkoutForm.country,
+            },
+            shippingMethod: checkoutForm.shippingMethod,
+            paymentMethod: checkoutForm.paymentMethod,
           },
-          shippingAddress: {
-            line1: checkoutForm.line1,
-            line2: checkoutForm.line2,
-            city: checkoutForm.city,
-            region: checkoutForm.region,
-            postalCode: checkoutForm.postalCode,
-            country: checkoutForm.country,
-          },
-          shippingMethod: checkoutForm.shippingMethod,
-          paymentMethod: checkoutForm.paymentMethod,
-        }, checkoutForm.couponCode.trim() ? { couponCode: checkoutForm.couponCode.trim() } : {}),
+          checkoutForm.couponCode.trim()
+            ? { couponCode: checkoutForm.couponCode.trim() }
+            : {},
+        ),
         checkoutIdempotencyKey,
       );
       setConfirmation(response);
       setPaymentResult(paymentResultViewModel(response.status));
-      const liveOrderCode = response.orderCode ?? response.code ?? response.evidence?.orderCode ?? nextOrderCode;
+      const liveOrderCode =
+        response.orderCode ??
+        response.code ??
+        response.evidence?.orderCode ??
+        nextOrderCode;
       setSelectedOrderCode(liveOrderCode);
       cart.clear();
-      saveCheckoutCouponCode('');
+      backendCartCodeRef.current = undefined;
+      saveCheckoutCouponCode("");
       setBackendCartCode(undefined);
-      setBackendCartRevision('0');
+      setBackendCartRevision("0");
       setBackendEntryCodes({});
       setBackendCartCalculation(undefined);
-      setSyncStatus('Order placed; cart cleared');
+      setSyncStatus("Order placed; cart cleared");
       try {
-        const detail = await readCustomerOrder(runtimeConfig, customerSession.accessToken, liveOrderCode);
+        const detail = await readCustomerOrder(
+          runtimeConfig,
+          customerSession.accessToken,
+          liveOrderCode,
+        );
         setOrderDetail(detail);
       } catch {
         setOrderDetail(undefined);
       }
       void loadCouponWallet(customerSession);
-      setView('payment-result');
+      setView("payment-result");
     } catch (nextError) {
       setOrderDetail(undefined);
-      const message = nextError instanceof Error ? nextError.message : 'Live checkout placement failed';
-      setPaymentResult(paymentResultViewModel('FAILED', message));
-      setView('payment-result');
+      const message =
+        nextError instanceof Error
+          ? nextError.message
+          : "Live checkout placement failed";
+      setPaymentResult(paymentResultViewModel("FAILED", message));
+      setView("payment-result");
       setError(message);
     } finally {
       setCheckoutBusy(false);
     }
   };
 
-  const brands = uniqueSorted(products.map((product) => productBrandLabel(product)));
-  const categoryOptions = uniqueSorted(products.flatMap((product) => product.categoryCodes ?? []));
-  const collectionOptions = uniqueSorted(products.flatMap((product) => productCollectionCodes(product)));
-  const colorOptions = uniqueSorted(products.flatMap((product) => productColorCodes(product)));
-  const sizeOptions = uniqueSorted(products.flatMap((product) => productSizeCodes(product)));
-  const availabilityOptions = uniqueSorted(products.map((product) => productAvailabilityLabel(product)));
+  const facetOptions = (key: string): string[] =>
+    (facets[key] ?? []).flatMap((item) => {
+      if (
+        !item ||
+        typeof item !== "object" ||
+        !("code" in item) ||
+        typeof item.code !== "string"
+      )
+        return [];
+      return [item.code];
+    });
+  const brands = facetOptions("brands");
+  const categoryOptions = facetOptions("categories");
+  const collectionOptions = facetOptions("collections");
+  const colorOptions = facetOptions("colors");
+  const sizeOptions = facetOptions("sizes");
+  const availabilityOptions = facetOptions("availability");
   const activeBrandFilters = uniqueSorted([brand, ...selectedFilters.brands]);
-  const selectedPriceMin = moneyAmount(selectedFilters.priceMin);
-  const selectedPriceMax = moneyAmount(selectedFilters.priceMax);
   const activeFilterCount = filterCount(selectedFilters) + (brand ? 1 : 0);
-  const visibleProducts = products.filter((product) => {
-    const productPrice = moneyAmount(product.price?.unitAmount);
-    if (!includesAny(productBrandLabel(product) ? [productBrandLabel(product) as string] : [], activeBrandFilters)) return false;
-    if (!includesAny(product.categoryCodes, selectedFilters.categories)) return false;
-    if (!includesAny(productCollectionCodes(product), selectedFilters.collections)) return false;
-    if (!includesAny(productColorCodes(product), selectedFilters.colors)) return false;
-    if (!includesAny(productSizeCodes(product), selectedFilters.sizes)) return false;
-    if (!includesAny([productAvailabilityLabel(product)], selectedFilters.availability)) return false;
-    if (selectedFilters.saleOnly && !productCollectionCodes(product).some((code) => normalizedText(code).includes('sale'))) return false;
-    if (productPrice === undefined && (selectedPriceMin !== undefined || selectedPriceMax !== undefined)) return false;
-    if (selectedPriceMin !== undefined && productPrice !== undefined && productPrice < selectedPriceMin) return false;
-    if (selectedPriceMax !== undefined && productPrice !== undefined && productPrice > selectedPriceMax) return false;
-    return true;
-  }).sort((left, right) => {
-    if (sortCode === 'price-asc') return (moneyAmount(left.price?.unitAmount) ?? 0) - (moneyAmount(right.price?.unitAmount) ?? 0);
-    if (sortCode === 'price-desc') return (moneyAmount(right.price?.unitAmount) ?? 0) - (moneyAmount(left.price?.unitAmount) ?? 0);
-    if (sortCode === 'name-asc') return String(left.name ?? left.productCode).localeCompare(String(right.name ?? right.productCode));
-    return 0;
-  });
-  const facetEntries = Object.entries(facets).filter(([, values]) => values.length > 0);
+  const visibleProducts = products;
+  const facetEntries = Object.entries(facets).filter(
+    ([, values]) => values.length > 0,
+  );
   const homeRailProducts = homeProducts.length ? homeProducts : products;
-  const featuredProducts = selectedHomeProducts(homeContent.topPicks.productCodes, homeRailProducts, homeContent.topPicks.pageSize ?? 4);
-  const bestSelling = selectedHomeProducts(homeContent.bestSelling.productCodes, homeRailProducts, homeContent.bestSelling.pageSize ?? 4);
+  const featuredProducts = selectedHomeProducts(
+    homeContent.topPicks.productCodes,
+    homeRailProducts,
+    homeContent.topPicks.pageSize ?? 4,
+  );
+  const bestSelling = selectedHomeProducts(
+    homeContent.bestSelling.productCodes,
+    homeRailProducts,
+    homeContent.bestSelling.pageSize ?? 4,
+  );
   const projectedListingProducts = selectedHomeProducts(
     productListingContent?.projectedProducts?.productCodes,
     homeRailProducts,
     productListingContent?.projectedProducts?.pageSize ?? 8,
   );
   const collections = homeContent.collections;
-  const selectedShippingOption = shippingOption(checkoutForm.shippingMethod, shippingMethodOptions);
+  const selectedShippingOption = shippingOption(
+    checkoutForm.shippingMethod,
+    shippingMethodOptions,
+  );
   const selectedPaymentOption = paymentOption(checkoutForm.paymentMethod);
-  const shippingAmount = shippingPrice(checkoutForm.shippingMethod, shippingMethodOptions);
-  const promotionDiscount = moneyAmount(backendCartCalculation?.discountAmount ?? backendCartCalculation?.decisions?.discount?.discountAmount) ?? backendPromotionDiscount ?? 0;
+  const shippingAmount = shippingPrice(
+    checkoutForm.shippingMethod,
+    shippingMethodOptions,
+  );
+  const promotionDiscount =
+    moneyAmount(
+      backendCartCalculation?.discountAmount ??
+        backendCartCalculation?.decisions?.discount?.discountAmount,
+    ) ??
+    backendPromotionDiscount ??
+    0;
   const taxAmount = moneyAmount(backendCartCalculation?.taxAmount) ?? 0;
-  const backendTotalAmount = moneyAmount(backendCartCalculation?.totalAmount ?? backendCartCalculation?.totals?.total);
-  const totalAmount = backendTotalAmount !== undefined ? Math.max(0, backendTotalAmount + shippingAmount) : Math.max(0, cart.subtotal - promotionDiscount + shippingAmount);
-  const confirmedOrderCode = orderDetail?.order.code ?? confirmation?.orderCode ?? confirmation?.code ?? confirmation?.evidence?.orderCode;
-  const confirmedStatus = orderDetail?.order.status ?? confirmation?.status ?? 'PLACED';
-  const confirmedTotal = orderDetail?.order.totalAmount ? Number(orderDetail.order.totalAmount) : totalAmount;
-  const completedConfirmationSteps = confirmation?.evidence?.completed ?? [];
+  const backendTotalAmount = moneyAmount(
+    backendCartCalculation?.totalAmount ??
+      backendCartCalculation?.totals?.total,
+  );
+  const totalAmount =
+    backendTotalAmount !== undefined
+      ? Math.max(0, backendTotalAmount + shippingAmount)
+      : Math.max(0, cart.subtotal - promotionDiscount + shippingAmount);
+  const confirmedOrderCode =
+    orderDetail?.order.code ??
+    confirmation?.orderCode ??
+    confirmation?.code ??
+    confirmation?.evidence?.orderCode;
+  const confirmedStatus =
+    orderDetail?.order.status ?? confirmation?.status ?? "PLACED";
+  const confirmedTotal = orderDetail?.order.totalAmount
+    ? Number(orderDetail.order.totalAmount)
+    : totalAmount;
   const reasonOptions = lifecycleReasonOptions[selectedLifecycleType];
   const lifecycleRecords = orderDetail?.lifecycle ?? [];
-  const activeOrderCode = selectedOrderCode ?? confirmedOrderCode ?? orderHistory[0]?.code;
-  const wishlistProducts = products.filter((product) => wishlistProductCodes.includes(product.productCode));
-  const compareProducts = products.filter((product) => compareProductCodes.includes(product.productCode));
-  const recommendedProductCodes = selected?.relatedProductCodes?.length ? selected.relatedProductCodes : [];
-  const recommendedProducts = products.filter((product) => recommendedProductCodes.includes(product.productCode) && product.productCode !== selected?.productCode).slice(0, 3);
-  const selectedCollection = searchContext === 'all'
-    ? undefined
-    : collections.find((collection) => collection.code === collectionCode || collection.code === searchCode);
-  const collectionLabelByCode = new Map(collections.map((collection) => [collection.code, collection.label]));
-  const filterOptionLabel = function (key: ProductFilterKey, value: string): string {
-    if (key === 'categories' || key === 'collections') return collectionLabelByCode.get(value) ?? humanizeCodeLabel(value);
-    return value;
+  const activeOrderCode =
+    selectedOrderCode ?? confirmedOrderCode ?? orderHistory[0]?.code;
+  const wishlistProducts = products.filter((product) =>
+    wishlistProductCodes.includes(product.productCode),
+  );
+  const compareProducts = products.filter((product) =>
+    compareProductCodes.includes(product.productCode),
+  );
+  const recommendedProductCodes = selected?.relatedProductCodes?.length
+    ? selected.relatedProductCodes
+    : [];
+  const recommendedProducts = products
+    .filter(
+      (product) =>
+        recommendedProductCodes.includes(product.productCode) &&
+        product.productCode !== selected?.productCode,
+    )
+    .slice(0, 3);
+  const selectedCollection =
+    searchContext === "all"
+      ? undefined
+      : collections.find(
+          (collection) =>
+            collection.code === collectionCode ||
+            collection.code === searchCode,
+        );
+  const collectionLabelByCode = new Map(
+    collections.map((collection) => [collection.code, collection.label]),
+  );
+  const filterOptionLabel = function (
+    key: ProductFilterKey,
+    value: string,
+  ): string {
+    if (key === "categories" || key === "collections")
+      return collectionLabelByCode.get(value) ?? humanizeCodeLabel(value);
+    const facet = (facets[key] ?? []).find(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        "code" in item &&
+        item.code === value,
+    );
+    if (
+      facet &&
+      typeof facet === "object" &&
+      "label" in facet &&
+      typeof facet.label === "string"
+    )
+      return facet.label;
+    return key === "brands" ? value : humanizeCodeLabel(value);
   };
-  const collectionIndexContent = experienceContent.collectionIndex ?? homeContent.collectionIndex;
-  const listingEyebrow = searchContext === 'brand'
-    ? 'Brand edit'
-    : searchContext === 'category'
-      ? 'Category edit'
-      : searchContext === 'collection'
-        ? 'Collection edit'
-        : 'Product Listing';
-  const listingHeading = productListingContent?.heading ?? selectedCollection?.label ?? 'Shop products';
-  const listingSummary = productListingContent?.summary ?? selectedCollection?.summary ?? 'Explore the latest apparel pieces resolved from Commerce discovery.';
-  const listingResultLabel = productListingContent?.resultLabel ?? 'products';
-  const completeStatusLabel = productListingContent?.completeStatusLabel ?? `All matching ${listingResultLabel} are visible`;
+  const collectionIndexContent =
+    experienceContent.collectionIndex ?? homeContent.collectionIndex;
+  const listingEyebrow =
+    searchContext === "brand"
+      ? "Brand edit"
+      : searchContext === "category"
+        ? "Category edit"
+        : searchContext === "collection"
+          ? "Collection edit"
+          : "Product Listing";
+  const listingHeading =
+    productListingContent?.heading ??
+    selectedCollection?.label ??
+    "Shop products";
+  const listingSummary =
+    productListingContent?.summary ??
+    selectedCollection?.summary ??
+    "Explore the latest apparel pieces resolved from Commerce discovery.";
+  const listingResultLabel = productListingContent?.resultLabel ?? "products";
+  const completeStatusLabel =
+    productListingContent?.completeStatusLabel ??
+    `All matching ${listingResultLabel} are visible`;
   const displayedProductCount = visibleProducts.length;
-  const listingTotalCount = productTotalCount !== undefined ? Math.max(productTotalCount, displayedProductCount) : undefined;
-  const listingPageStart = displayedProductCount ? ((listingPage - 1) * PRODUCT_LISTING_BATCH_SIZE) + 1 : 0;
-  const listingPageEnd = displayedProductCount ? listingPageStart + displayedProductCount - 1 : 0;
-  const listingTotalPages = listingTotalCount !== undefined ? Math.max(1, Math.ceil(listingTotalCount / PRODUCT_LISTING_BATCH_SIZE)) : undefined;
-  const listingCountText = listingTotalCount !== undefined
-    ? `Showing ${listingPageStart}-${listingPageEnd} of ${listingTotalCount} ${listingResultLabel}`
-    : `Showing ${listingPageStart}-${listingPageEnd} ${listingResultLabel}`;
-  const canShowNextListingPage = listingTotalPages !== undefined
-    ? listingPage < listingTotalPages
-    : listingHasNextPage;
+  const listingTotalCount =
+    productTotalCount !== undefined
+      ? Math.max(productTotalCount, displayedProductCount)
+      : undefined;
+  const listingPageStart = displayedProductCount
+    ? (listingPage - 1) * PRODUCT_LISTING_BATCH_SIZE + 1
+    : 0;
+  const listingPageEnd = displayedProductCount
+    ? listingPageStart + displayedProductCount - 1
+    : 0;
+  const listingTotalPages =
+    listingTotalCount !== undefined
+      ? Math.max(1, Math.ceil(listingTotalCount / PRODUCT_LISTING_BATCH_SIZE))
+      : undefined;
+  const listingCountText =
+    listingTotalCount !== undefined
+      ? `Showing ${listingPageStart}-${listingPageEnd} of ${listingTotalCount} ${listingResultLabel}`
+      : `Showing ${listingPageStart}-${listingPageEnd} ${listingResultLabel}`;
+  const canShowNextListingPage =
+    listingTotalPages !== undefined
+      ? listingPage < listingTotalPages
+      : listingHasNextPage;
   const canShowPreviousListingPage = listingPage > 1;
-  const listingPaginationPages = listingTotalPages !== undefined
-    ? Array.from({ length: listingTotalPages }, (_, index) => index + 1).filter((pageNumber) => (
-      pageNumber === 1 ||
-      pageNumber === listingTotalPages ||
-      Math.abs(pageNumber - listingPage) <= 1
-    ))
-    : Array.from(new Set([
-      1,
-      ...(listingPage > 2 ? [listingPage - 1] : []),
-      ...(listingPage > 1 ? [listingPage] : []),
-      ...(canShowNextListingPage ? [listingPage + 1] : []),
-    ])).sort((left, right) => left - right);
+  const listingPaginationPages =
+    listingTotalPages !== undefined
+      ? Array.from(
+          { length: listingTotalPages },
+          (_, index) => index + 1,
+        ).filter(
+          (pageNumber) =>
+            pageNumber === 1 ||
+            pageNumber === listingTotalPages ||
+            Math.abs(pageNumber - listingPage) <= 1,
+        )
+      : Array.from(
+          new Set([
+            1,
+            ...(listingPage > 2 ? [listingPage - 1] : []),
+            ...(listingPage > 1 ? [listingPage] : []),
+            ...(canShowNextListingPage ? [listingPage + 1] : []),
+          ]),
+        ).sort((left, right) => left - right);
   const productListingHeroFallbackMedia = visibleProducts
     .map((product): AgoraMediaItem | undefined => {
       const image = productImageUrl(product, runtimeConfig.mediaBaseUrl);
@@ -1289,141 +2190,266 @@ export function StorefrontPage() {
     .filter((item): item is AgoraMediaItem => Boolean(item))
     .slice(0, 4);
   const productListingDefaultHeroMedia: AgoraMediaItem = {
-    alt: 'Agora apparel product listing editorial banner',
-    image: mediaDeliveryUrl(runtimeConfig.mediaBaseUrl, PRODUCT_LISTING_DEFAULT_HERO_MEDIA_CODE),
+    alt: "Agora apparel product listing editorial banner",
+    image: mediaDeliveryUrl(
+      runtimeConfig.mediaBaseUrl,
+      PRODUCT_LISTING_DEFAULT_HERO_MEDIA_CODE,
+    ),
     mediaCode: PRODUCT_LISTING_DEFAULT_HERO_MEDIA_CODE,
   };
   const productListingHeroMedia = productListingContent?.heroMedia?.image
     ? productListingContent.heroMedia
     : productListingDefaultHeroMedia;
-  const productListingHeroSupportingMedia = productListingContent?.heroSupportingMedia?.length
+  const productListingHeroSupportingMedia = productListingContent
+    ?.heroSupportingMedia?.length
     ? productListingContent.heroSupportingMedia
-    : productListingHeroMedia.mediaCode === productListingDefaultHeroMedia.mediaCode
+    : productListingHeroMedia.mediaCode ===
+        productListingDefaultHeroMedia.mediaCode
       ? []
       : productListingHeroFallbackMedia.slice(1);
   const productListingHeroHasMedia = Boolean(productListingHeroMedia?.image);
   const activeFilterLabels = [
-    ...activeBrandFilters.map((value) => ({ key: `brand:${value}`, label: `Brand: ${value}` })),
-    ...selectedFilters.categories.map((value) => ({ key: `category:${value}`, label: `Category: ${filterOptionLabel('categories', value)}` })),
-    ...selectedFilters.collections.map((value) => ({ key: `collection:${value}`, label: `Collection: ${filterOptionLabel('collections', value)}` })),
-    ...selectedFilters.colors.map((value) => ({ key: `color:${value}`, label: `Color: ${value}` })),
-    ...selectedFilters.sizes.map((value) => ({ key: `size:${value}`, label: `Size: ${value}` })),
-    ...selectedFilters.availability.map((value) => ({ key: `availability:${value}`, label: value })),
-    ...(selectedFilters.saleOnly ? [{ key: 'saleOnly', label: 'Sale only' }] : []),
-    ...(selectedFilters.priceMin ? [{ key: 'priceMin', label: `Min ${selectedFilters.priceMin}` }] : []),
-    ...(selectedFilters.priceMax ? [{ key: 'priceMax', label: `Max ${selectedFilters.priceMax}` }] : []),
+    ...activeBrandFilters.map((value) => ({
+      key: `brand:${value}`,
+      label: `Brand: ${value}`,
+    })),
+    ...selectedFilters.categories.map((value) => ({
+      key: `category:${value}`,
+      label: `Category: ${filterOptionLabel("categories", value)}`,
+    })),
+    ...selectedFilters.collections.map((value) => ({
+      key: `collection:${value}`,
+      label: `Collection: ${filterOptionLabel("collections", value)}`,
+    })),
+    ...selectedFilters.colors.map((value) => ({
+      key: `color:${value}`,
+      label: `Color: ${value}`,
+    })),
+    ...selectedFilters.sizes.map((value) => ({
+      key: `size:${value}`,
+      label: `Size: ${value}`,
+    })),
+    ...selectedFilters.availability.map((value) => ({
+      key: `availability:${value}`,
+      label: value,
+    })),
+    ...(selectedFilters.saleOnly
+      ? [{ key: "saleOnly", label: "Sale only" }]
+      : []),
+    ...(selectedFilters.priceMin
+      ? [{ key: "priceMin", label: `Min ${selectedFilters.priceMin}` }]
+      : []),
+    ...(selectedFilters.priceMax
+      ? [{ key: "priceMax", label: `Max ${selectedFilters.priceMax}` }]
+      : []),
   ];
-  const filterOptionCount = function (key: ProductFilterKey, value: string): number {
-    return products.filter((product) => {
-      if (key === 'brands') return productBrandLabel(product) === value;
-      if (key === 'categories') return (product.categoryCodes ?? []).includes(value);
-      if (key === 'collections') return productCollectionCodes(product).includes(value);
-      if (key === 'colors') return productColorCodes(product).includes(value);
-      if (key === 'sizes') return productSizeCodes(product).includes(value);
-      return productAvailabilityLabel(product) === value;
-    }).length;
+  const filterOptionCount = function (
+    key: ProductFilterKey,
+    value: string,
+  ): number {
+    const item = (facets[key] ?? []).find(
+      (entry) =>
+        entry &&
+        typeof entry === "object" &&
+        "code" in entry &&
+        entry.code === value,
+    );
+    return item &&
+      typeof item === "object" &&
+      "count" in item &&
+      typeof item.count === "number"
+      ? item.count
+      : 0;
   };
-  const effectiveSelectedFilters: ProductFilterState = Object.freeze({ ...selectedFilters, brands: activeBrandFilters });
-  const listingFilterGroups: readonly ProductFilterOptionGroup[] = Object.freeze([
-    { key: 'categories', label: 'Product Categories', options: categoryOptions },
-    { key: 'sizes', label: 'Size', options: sizeOptions },
-    { key: 'colors', label: 'Color', options: colorOptions },
-    { key: 'brands', label: 'Brand', options: brands },
-    { key: 'collections', label: 'Collection', options: collectionOptions },
-    { key: 'availability', label: 'Availability', options: availabilityOptions },
-  ]);
+
+  const listingFilterGroups: readonly ProductFilterOptionGroup[] =
+    Object.freeze([
+      {
+        key: "categories",
+        label: "Product Categories",
+        options: categoryOptions,
+      },
+      { key: "sizes", label: "Size", options: sizeOptions },
+      { key: "colors", label: "Color", options: colorOptions },
+      { key: "brands", label: "Brand", options: brands },
+      { key: "collections", label: "Collection", options: collectionOptions },
+      {
+        key: "availability",
+        label: "Availability",
+        options: availabilityOptions,
+      },
+    ]);
   const searchFacetsText = facetEntries.length
-    ? facetEntries.map(([facetCode, values]) => `${facetCode}: ${values.map((value) => facetLabel(value)).join(', ')}`).join(' · ')
+    ? facetEntries
+        .map(
+          ([facetCode, values]) =>
+            `${facetCode}: ${values.map((value) => facetLabel(value)).join(", ")}`,
+        )
+        .join(" · ")
     : undefined;
 
-  const lifecycleEvidenceLabel = (record: { readonly evidence?: Readonly<Record<string, unknown>> }, key: string) => {
+  const lifecycleEvidenceLabel = (
+    record: { readonly evidence?: Readonly<Record<string, unknown>> },
+    key: string,
+  ) => {
     const value = record.evidence?.[key];
-    return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ? String(value) : undefined;
+    return typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+      ? String(value)
+      : undefined;
   };
 
-  const loadOrderDetail = async (orderCodeToLoad: string, session = customerSession) => {
+  const loadOrderDetail = async (
+    orderCodeToLoad: string,
+    session = customerSession,
+  ) => {
     if (!session.accessToken) {
-      setOrderHistoryStatus('Sign in to view order history.');
+      setOrderHistoryStatus("Sign in to view order history.");
       return undefined;
     }
-    const detail = await readCustomerOrder(runtimeConfig, session.accessToken, orderCodeToLoad);
+    const detail = await readCustomerOrder(
+      runtimeConfig,
+      session.accessToken,
+      orderCodeToLoad,
+    );
     setOrderDetail(detail);
     setSelectedOrderCode(detail.order.code);
     return detail;
   };
 
-  const loadOrderHistory = async (session = customerSession, preferredOrderCode = selectedOrderCode ?? confirmedOrderCode) => {
+  const loadOrderHistory = async (
+    session = customerSession,
+    preferredOrderCode = selectedOrderCode ?? confirmedOrderCode,
+  ) => {
     if (!session.accessToken) {
-      setOrderHistoryStatus('Sign in to view order history.');
+      setOrderHistoryStatus("Sign in to view order history.");
       return;
     }
-    setOrderHistoryStatus('Loading order history…');
+    setOrderHistoryStatus("Loading order history…");
     try {
-      const orders = await listCustomerOrders(runtimeConfig, session.accessToken);
+      const orders = await listCustomerOrders(
+        runtimeConfig,
+        session.accessToken,
+      );
       setOrderHistory(orders);
       const nextOrderCode = preferredOrderCode ?? orders[0]?.code;
       if (nextOrderCode) await loadOrderDetail(nextOrderCode, session);
-      setOrderHistoryStatus(orders.length ? `${orders.length} order(s) loaded` : 'No orders yet.');
+      setOrderHistoryStatus(
+        orders.length ? `${orders.length} order(s) loaded` : "No orders yet.",
+      );
     } catch (nextError) {
-      setOrderHistoryStatus(nextError instanceof Error ? nextError.message : 'Order history unavailable');
+      setOrderHistoryStatus(
+        nextError instanceof Error
+          ? nextError.message
+          : "Order history unavailable",
+      );
     }
   };
 
   const loadCouponWallet = async (session = customerSession) => {
     if (!session.accessToken) {
-      setDigitalWalletStatus('Sign in to view purchased coupon codes.');
+      setDigitalWalletStatus("Sign in to view purchased coupon codes.");
       setDigitalEntitlements([]);
       return;
     }
-    setDigitalWalletStatus('Loading coupon wallet…');
+    setDigitalWalletStatus("Loading coupon wallet…");
     try {
-      const response = await listDigitalEntitlements(runtimeConfig, session.accessToken);
+      const response = await listDigitalEntitlements(
+        runtimeConfig,
+        session.accessToken,
+      );
       setDigitalEntitlements(response.entitlements);
-      setDigitalWalletStatus(response.entitlements.length ? `${response.entitlements.length} coupon entitlement(s) loaded` : 'No purchased coupon codes yet.');
+      setDigitalWalletStatus(
+        response.entitlements.length
+          ? `${response.entitlements.length} coupon entitlement(s) loaded`
+          : "No purchased coupon codes yet.",
+      );
     } catch (nextError) {
-      setDigitalWalletStatus(nextError instanceof Error ? nextError.message : 'Coupon wallet unavailable');
+      setDigitalWalletStatus(
+        nextError instanceof Error
+          ? nextError.message
+          : "Coupon wallet unavailable",
+      );
     }
   };
 
   const openCouponWallet = () => {
-    setView('coupons');
-    if (typeof window !== 'undefined') window.history.pushState({}, '', '/coupons');
+    setView("coupons");
+    if (typeof window !== "undefined")
+      window.history.pushState({}, "", "/coupons");
     void loadCouponWallet();
   };
 
   const revealCoupon = (entitlementCode: string) => {
     if (!customerSession.accessToken) {
-      setDigitalWalletStatus('Sign in to reveal purchased coupon codes.');
+      setDigitalWalletStatus("Sign in to reveal purchased coupon codes.");
       return;
     }
-    setDigitalWalletStatus('Revealing coupon code…');
-    void revealDigitalEntitlement(runtimeConfig, customerSession.accessToken, entitlementCode)
+    setDigitalWalletStatus("Revealing coupon code…");
+    void revealDigitalEntitlement(
+      runtimeConfig,
+      customerSession.accessToken,
+      entitlementCode,
+    )
       .then((response) => {
         const token = response.token;
         if (!token) {
-          setDigitalWalletStatus(response.reasonCode ?? 'Coupon code is not available to reveal yet.');
+          setDigitalWalletStatus(
+            response.reasonCode ??
+              "Coupon code is not available to reveal yet.",
+          );
           return;
         }
-        setRevealedCouponTokens((current) => ({ ...current, [entitlementCode]: token }));
-        setDigitalWalletStatus('Coupon code revealed');
+        setRevealedCouponTokens((current) => ({
+          ...current,
+          [entitlementCode]: token,
+        }));
+        setDigitalWalletStatus("Coupon code revealed");
       })
-      .catch((nextError: unknown) => setDigitalWalletStatus(nextError instanceof Error ? nextError.message : 'Coupon reveal failed'));
+      .catch((nextError: unknown) =>
+        setDigitalWalletStatus(
+          nextError instanceof Error
+            ? nextError.message
+            : "Coupon reveal failed",
+        ),
+      );
   };
 
   const useRevealedCoupon = (token: string) => {
     saveCheckoutCouponCode(token);
     setCheckoutForm((current) => ({ ...current, couponCode: token }));
-    setDigitalWalletStatus('Coupon code added to checkout.');
+    setDigitalWalletStatus("Coupon code added to checkout.");
     if (cart.entries.length) {
-      setCheckoutStep('payment');
-      setView('checkout');
-      if (typeof window !== 'undefined') window.history.pushState({}, '', '/checkout');
+      setCheckoutStep("payment");
+      setView("checkout");
+      if (typeof window !== "undefined")
+        window.history.pushState({}, "", "/checkout");
     }
   };
 
   useEffect(() => {
-    if (view === 'coupons') void loadCouponWallet(customerSession);
+    if (view === "coupons") void loadCouponWallet(customerSession);
   }, [customerSession.accessToken, view]);
+
+  useEffect(() => {
+    if (view !== "plp") return;
+    const nextSearch = listingLocationSearch(
+      window.location.search,
+      query,
+      selectedFilters,
+      sortCode,
+      listingPage,
+    );
+    if (routeStateFromLocation(rootCollectionCode).view !== "plp") {
+      window.history.pushState({}, "", `/shop${nextSearch}`);
+    } else if (window.location.search !== nextSearch)
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `${window.location.pathname}${nextSearch}${window.location.hash}`,
+      );
+  }, [view, query, selectedFilters, sortCode, listingPage, rootCollectionCode]);
 
   useEffect(() => {
     const applyRouteState = () => {
@@ -1433,15 +2459,21 @@ export function StorefrontPage() {
       setSearchCode(nextRouteState.searchCode);
       setSearchContext(nextRouteState.searchContext);
       setQuery(nextRouteState.query);
-      setListingPage(1);
+      const preferences = readListingLocation(window.location.search);
+      setSelectedFilters(preferences.filters);
+      setSortCode(preferences.sortCode);
+      setListingPage(preferences.page);
       setPendingProductSlug(nextRouteState.productSlug);
-      if (nextRouteState.view !== 'pdp') setSelected(undefined);
-      if (nextRouteState.checkoutStep) setCheckoutStep(nextRouteState.checkoutStep);
-      if (nextRouteState.view === 'orders') void loadOrderHistory(customerSession);
-      if (nextRouteState.view === 'coupons') void loadCouponWallet(customerSession);
+      if (nextRouteState.view !== "pdp") setSelected(undefined);
+      if (nextRouteState.checkoutStep)
+        setCheckoutStep(nextRouteState.checkoutStep);
+      if (nextRouteState.view === "orders")
+        void loadOrderHistory(customerSession);
+      if (nextRouteState.view === "coupons")
+        void loadCouponWallet(customerSession);
     };
-    window.addEventListener('popstate', applyRouteState);
-    return () => window.removeEventListener('popstate', applyRouteState);
+    window.addEventListener("popstate", applyRouteState);
+    return () => window.removeEventListener("popstate", applyRouteState);
   }, [customerSession, rootCollectionCode]);
 
   const openAction = (action: AgoraLinkAction | undefined) => {
@@ -1454,29 +2486,29 @@ export function StorefrontPage() {
       openCollection(action.collectionCode);
       return;
     }
-    if (action.path?.startsWith('http')) {
-      window.open(action.path, '_blank', 'noreferrer');
+    if (action.path?.startsWith("http")) {
+      window.open(action.path, "_blank", "noreferrer");
       return;
     }
-    if (action.path === '/' || action.path === '#home') {
-      setView('home');
-      if (typeof window !== 'undefined') window.history.pushState({}, '', '/');
+    if (action.path === "/" || action.path === "#home") {
+      setView("home");
+      if (typeof window !== "undefined") window.history.pushState({}, "", "/");
       return;
     }
-    if (action.path === '/collections') {
+    if (action.path === "/collections") {
       openCollectionsIndex();
       return;
     }
-    if (action.path === '/shop') {
-      openProductListing('all');
+    if (action.path === "/shop") {
+      openProductListing("all");
       return;
     }
-    if (action.path === '/coupons') {
+    if (action.path === "/coupons") {
       openCouponWallet();
       return;
     }
     if (action.path) {
-      window.history.pushState({}, '', action.path);
+      window.history.pushState({}, "", action.path);
       const nextRouteState = routeStateFromLocation(rootCollectionCode);
       setView(nextRouteState.view);
       setCollectionCode(nextRouteState.collectionCode);
@@ -1503,95 +2535,170 @@ export function StorefrontPage() {
     const orderCodeForLifecycle = activeOrderCode ?? confirmedOrderCode;
     if (!orderCodeForLifecycle) return;
     if (!customerSession.accessToken) {
-      setLifecycleStatus(`${requestType} local fallback preview captured for ${orderCodeForLifecycle}`);
+      setLifecycleStatus(
+        `${requestType} local fallback preview captured for ${orderCodeForLifecycle}`,
+      );
       return;
     }
     setLifecycleStatus(`Previewing ${requestType} eligibility…`);
-    void previewLifecycleRequest(runtimeConfig, customerSession.accessToken, orderCodeForLifecycle, requestType, lifecycleInput())
+    void previewLifecycleRequest(
+      runtimeConfig,
+      customerSession.accessToken,
+      orderCodeForLifecycle,
+      requestType,
+      lifecycleInput(),
+    )
       .then((preview) => {
-        setLifecyclePreview(preview as unknown as Readonly<Record<string, unknown>>);
-        setLifecycleStatus(`${requestType} preview ${lifecycleSummary(preview)} · eligible ${preview.eligible === false ? 'no' : 'yes'}`);
+        setLifecyclePreview(
+          preview as unknown as Readonly<Record<string, unknown>>,
+        );
+        setLifecycleStatus(
+          `${requestType} preview ${lifecycleSummary(preview)} · eligible ${preview.eligible === false ? "no" : "yes"}`,
+        );
       })
-      .catch(() => setLifecycleStatus(`${requestType} local fallback preview captured for ${orderCodeForLifecycle}`));
+      .catch(() =>
+        setLifecycleStatus(
+          `${requestType} local fallback preview captured for ${orderCodeForLifecycle}`,
+        ),
+      );
   };
 
   const requestLifecycle = (requestType: (typeof lifecycleTypes)[number]) => {
     const orderCodeForLifecycle = activeOrderCode ?? confirmedOrderCode;
     if (!orderCodeForLifecycle) return;
     if (!customerSession.accessToken) {
-      setLifecycleStatus(`${requestType} local fallback request captured for ${orderCodeForLifecycle}`);
+      setLifecycleStatus(
+        `${requestType} local fallback request captured for ${orderCodeForLifecycle}`,
+      );
       return;
     }
-    void submitLifecycleRequest(runtimeConfig, customerSession.accessToken, orderCodeForLifecycle, requestType, lifecycleInput())
+    void submitLifecycleRequest(
+      runtimeConfig,
+      customerSession.accessToken,
+      orderCodeForLifecycle,
+      requestType,
+      lifecycleInput(),
+    )
       .then((response) => {
-        const policyReasons = response.preview.reasonCodes?.join(', ');
-        setLifecycleStatus(`${requestType} ${lifecycleSummary(response.preview, response.created)}${policyReasons ? ` · reasons: ${policyReasons}` : ''}`);
-        setLifecyclePreview(response.preview as unknown as Readonly<Record<string, unknown>>);
-        if (customerSession.accessToken) void loadOrderDetail(orderCodeForLifecycle, customerSession);
+        const policyReasons = response.preview.reasonCodes?.join(", ");
+        setLifecycleStatus(
+          `${requestType} ${lifecycleSummary(response.preview, response.created)}${policyReasons ? ` · reasons: ${policyReasons}` : ""}`,
+        );
+        setLifecyclePreview(
+          response.preview as unknown as Readonly<Record<string, unknown>>,
+        );
+        if (customerSession.accessToken)
+          void loadOrderDetail(orderCodeForLifecycle, customerSession);
       })
-      .catch(() => setLifecycleStatus(`${requestType} local fallback request captured for ${orderCodeForLifecycle}`));
+      .catch(() =>
+        setLifecycleStatus(
+          `${requestType} local fallback request captured for ${orderCodeForLifecycle}`,
+        ),
+      );
   };
 
-  const selectedSelection = apparelSelectionForVariant(selected, selectedVariantCode);
+  const selectedSelection = apparelSelectionForVariant(
+    selected,
+    selectedVariantCode,
+  );
   const selectedColourCode = selectedSelection.colourCode;
   const selectedSizeCode = selectedSelection.sizeCode;
   const selectedColorOptions = productColorOptions(selected);
   const selectedSizeOptions = productSizeOptions(selected, selectedColourCode);
-  const quickAddSelection = apparelSelectionForVariant(quickAdd, quickAddVariantCode);
+  const quickAddSelection = apparelSelectionForVariant(
+    quickAdd,
+    quickAddVariantCode,
+  );
   const quickAddColourCode = quickAddSelection.colourCode;
   const quickAddSizeCode = quickAddSelection.sizeCode;
   const quickAddColorOptions = productColorOptions(quickAdd);
   const quickAddSizeOptions = productSizeOptions(quickAdd, quickAddColourCode);
-  const quickAddImage = quickAdd ? apparelImageUrlForVariant(quickAdd, quickAddSelection.variantCode, runtimeConfig.mediaBaseUrl) : undefined;
-  const quickAddPrice = `${quickAdd?.price?.currency ?? 'USD'} ${quickAdd?.price?.unitAmount ?? '0.00'}`;
-  const quickViewSelection = apparelSelectionForVariant(quickView, quickViewVariantCode);
+  const quickAddImage = quickAdd
+    ? apparelImageUrlForVariant(
+        quickAdd,
+        quickAddSelection.variantCode,
+        runtimeConfig.mediaBaseUrl,
+      )
+    : undefined;
+  const quickAddPrice = `${quickAdd?.price?.currency ?? "USD"} ${quickAdd?.price?.unitAmount ?? "0.00"}`;
+  const quickViewSelection = apparelSelectionForVariant(
+    quickView,
+    quickViewVariantCode,
+  );
   const quickViewColourCode = quickViewSelection.colourCode;
   const quickViewSizeCode = quickViewSelection.sizeCode;
   const quickViewColorOptions = productColorOptions(quickView);
-  const quickViewSizeOptions = productSizeOptions(quickView, quickViewColourCode);
-  const quickViewImage = quickView ? apparelImageUrlForVariant(quickView, quickViewSelection.variantCode, runtimeConfig.mediaBaseUrl) : undefined;
-  const quickViewPrice = `${quickView?.price?.currency ?? 'USD'} ${quickView?.price?.unitAmount ?? '0.00'}`;
+  const quickViewSizeOptions = productSizeOptions(
+    quickView,
+    quickViewColourCode,
+  );
+  const quickViewImage = quickView
+    ? apparelImageUrlForVariant(
+        quickView,
+        quickViewSelection.variantCode,
+        runtimeConfig.mediaBaseUrl,
+      )
+    : undefined;
+  const quickViewPrice = `${quickView?.price?.currency ?? "USD"} ${quickView?.price?.unitAmount ?? "0.00"}`;
   const useCmsHeroImages = true;
-  const headerLogoText = headerContent.logoText ?? 'NODICS';
-  const headerSubtitle = headerContent.subtitle ?? 'AGORA';
+  const headerLogoText = headerContent.logoText ?? "NODICS";
+  const headerSubtitle = headerContent.subtitle ?? "AGORA";
   const storefrontLabels = homeContent.storefrontLabels;
-  const addToCartLabel = storefrontLabels.addToCart ?? 'Add to cart';
-  const availableColorsLabel = storefrontLabels.availableColors ?? 'Available colors';
-  const availableSizesLabel = storefrontLabels.availableSizes ?? 'Available sizes';
-  const backToListingLabel = storefrontLabels.backToListing ?? 'Back to listing';
-  const buyNowLabel = storefrontLabels.buyNow ?? 'Buy it now';
-  const closeQuickAddLabel = storefrontLabels.closeQuickAdd ?? 'Close quick add';
-  const closeQuickViewLabel = storefrontLabels.closeQuickView ?? 'Close';
-  const colorLabel = storefrontLabels.color ?? 'Color';
-  const colorsLabel = storefrontLabels.colors ?? 'Colors';
-  const compareLabel = storefrontLabels.compare ?? 'Compare';
-  const decreaseQuantityLabel = storefrontLabels.decreaseQuantity ?? 'Decrease quantity';
-  const descriptionLabel = storefrontLabels.description ?? 'Description';
-  const featuredProductsAriaLabel = storefrontLabels.featuredProductsAriaLabel ?? 'Featured products';
-  const increaseQuantityLabel = storefrontLabels.increaseQuantity ?? 'Increase quantity';
-  const quantityLabel = storefrontLabels.quantity ?? 'Quantity';
-  const quickAddLabel = storefrontLabels.quickAdd ?? 'Quick Add';
-  const quickViewTitleLabel = storefrontLabels.quickViewTitle ?? 'Quick View';
-  const recommendationsEyebrowLabel = storefrontLabels.recommendationsEyebrow ?? 'Curated recommendations';
-  const recommendationsHeadingLabel = storefrontLabels.recommendationsHeading ?? 'Related pieces';
-  const recommendationsSummaryLabel = storefrontLabels.recommendationsSummary ?? 'Recommendations are resolved from Commerce product relationships.';
-  const removeFromCompareLabel = storefrontLabels.removeFromCompare ?? 'Remove from compare';
-  const removeFromWishlistLabel = storefrontLabels.removeFromWishlist ?? 'Remove from wishlist';
-  const reviewsLabel = storefrontLabels.reviews ?? 'Reviews';
-  const selectColorPrefix = storefrontLabels.selectColorPrefix ?? 'Select';
-  const shippingReturnsLabel = storefrontLabels.shippingReturns ?? 'Shipping & returns';
-  const shippingReturnsText = storefrontLabels.shippingReturnsText ?? 'Free shipping threshold and 14-day returns are resolved from backend policy.';
-  const sizeLabel = storefrontLabels.size ?? 'Size';
-  const addToWishlistLabel = storefrontLabels.addToWishlist ?? 'Add to wishlist';
-  const bestSellingProductsAriaLabel = storefrontLabels.bestSellingProductsAriaLabel ?? 'Best selling products';
+  const addToCartLabel = storefrontLabels.addToCart ?? "Add to cart";
+  const availableColorsLabel =
+    storefrontLabels.availableColors ?? "Available colors";
+  const availableSizesLabel =
+    storefrontLabels.availableSizes ?? "Available sizes";
+  const backToListingLabel =
+    storefrontLabels.backToListing ?? "Back to listing";
+  const buyNowLabel = storefrontLabels.buyNow ?? "Buy it now";
+  const closeQuickAddLabel =
+    storefrontLabels.closeQuickAdd ?? "Close quick add";
+  const closeQuickViewLabel = storefrontLabels.closeQuickView ?? "Close";
+  const colorLabel = storefrontLabels.color ?? "Color";
+  const colorsLabel = storefrontLabels.colors ?? "Colors";
+  const compareLabel = storefrontLabels.compare ?? "Compare";
+  const decreaseQuantityLabel =
+    storefrontLabels.decreaseQuantity ?? "Decrease quantity";
+  const descriptionLabel = storefrontLabels.description ?? "Description";
+  const featuredProductsAriaLabel =
+    storefrontLabels.featuredProductsAriaLabel ?? "Featured products";
+  const increaseQuantityLabel =
+    storefrontLabels.increaseQuantity ?? "Increase quantity";
+  const quantityLabel = storefrontLabels.quantity ?? "Quantity";
+  const quickAddLabel = storefrontLabels.quickAdd ?? "Quick Add";
+  const quickViewTitleLabel = storefrontLabels.quickViewTitle ?? "Quick View";
+  const recommendationsEyebrowLabel =
+    storefrontLabels.recommendationsEyebrow ?? "Curated recommendations";
+  const recommendationsHeadingLabel =
+    storefrontLabels.recommendationsHeading ?? "Related pieces";
+  const recommendationsSummaryLabel =
+    storefrontLabels.recommendationsSummary ??
+    "Explore products selected to complement your choice.";
+  const removeFromCompareLabel =
+    storefrontLabels.removeFromCompare ?? "Remove from compare";
+  const removeFromWishlistLabel =
+    storefrontLabels.removeFromWishlist ?? "Remove from wishlist";
+  const reviewsLabel = storefrontLabels.reviews ?? "Reviews";
+  const selectColorPrefix = storefrontLabels.selectColorPrefix ?? "Select";
+  const shippingReturnsLabel =
+    storefrontLabels.shippingReturns ?? "Shipping & returns";
+  const shippingReturnsText =
+    storefrontLabels.shippingReturnsText ??
+    "Free shipping threshold and 14-day returns are resolved from backend policy.";
+  const sizeLabel = storefrontLabels.size ?? "Size";
+  const addToWishlistLabel =
+    storefrontLabels.addToWishlist ?? "Add to wishlist";
+  const bestSellingProductsAriaLabel =
+    storefrontLabels.bestSellingProductsAriaLabel ?? "Best selling products";
   const hasFooterContent = Boolean(
     homeContent.footer.summary ||
-      homeContent.footer.contactEmail ||
-      homeContent.footer.groups.length ||
-      homeContent.footer.newsletter ||
-      homeContent.footer.legalLinks.length ||
-      homeContent.footer.copyright ||
-      homeContent.footer.brandLabel,
+    homeContent.footer.contactEmail ||
+    homeContent.footer.groups.length ||
+    homeContent.footer.newsletter ||
+    homeContent.footer.legalLinks.length ||
+    homeContent.footer.copyright ||
+    homeContent.footer.brandLabel,
   );
   const renderStorefrontFooter = function () {
     if (!hasFooterContent) return null;
@@ -1599,29 +2706,54 @@ export function StorefrontPage() {
       <footer className="storefront-footer">
         <section className="storefront-footer-brand">
           <NodicsBrand logoText={headerLogoText} subtitle={headerSubtitle} />
-          {homeContent.footer.summary ? <p>{homeContent.footer.summary}</p> : null}
-          {homeContent.footer.contactEmail ? <a href={`mailto:${homeContent.footer.contactEmail}`}>{homeContent.footer.contactEmail}</a> : null}
+          {homeContent.footer.summary ? (
+            <p>{homeContent.footer.summary}</p>
+          ) : null}
+          {homeContent.footer.contactEmail ? (
+            <a href={`mailto:${homeContent.footer.contactEmail}`}>
+              {homeContent.footer.contactEmail}
+            </a>
+          ) : null}
         </section>
         {homeContent.footer.groups.map((group) => (
           <section className="storefront-footer-links" key={group.title}>
             <h3>{group.title}</h3>
-            {group.links.map((link) => <span className="footer-link" key={link}>{link}</span>)}
+            {group.links.map((link) => (
+              <span className="footer-link" key={link}>
+                {link}
+              </span>
+            ))}
           </section>
         ))}
         {homeContent.footer.newsletter ? (
           <section className="storefront-footer-newsletter">
-            {homeContent.footer.newsletter.title ? <h3>{homeContent.footer.newsletter.title}</h3> : null}
-            {homeContent.footer.newsletter.text ? <p>{homeContent.footer.newsletter.text}</p> : null}
+            {homeContent.footer.newsletter.title ? (
+              <h3>{homeContent.footer.newsletter.title}</h3>
+            ) : null}
+            {homeContent.footer.newsletter.text ? (
+              <p>{homeContent.footer.newsletter.text}</p>
+            ) : null}
             <form onSubmit={(event) => event.preventDefault()}>
-              <input aria-label="Newsletter email" placeholder={homeContent.footer.newsletter?.placeholder} />
-              <button type="submit">{homeContent.footer.newsletter?.buttonLabel}</button>
+              <input
+                aria-label="Newsletter email"
+                placeholder={homeContent.footer.newsletter?.placeholder}
+              />
+              <button type="submit">
+                {homeContent.footer.newsletter?.buttonLabel}
+              </button>
             </form>
           </section>
         ) : null}
         <section className="storefront-footer-legal">
-          {homeContent.footer.copyright ? <span>{homeContent.footer.copyright}</span> : null}
-          {homeContent.footer.brandLabel ? <span>{homeContent.footer.brandLabel}</span> : null}
-          {homeContent.footer.legalLinks.map((link) => <span key={link}>{link}</span>)}
+          {homeContent.footer.copyright ? (
+            <span>{homeContent.footer.copyright}</span>
+          ) : null}
+          {homeContent.footer.brandLabel ? (
+            <span>{homeContent.footer.brandLabel}</span>
+          ) : null}
+          {homeContent.footer.legalLinks.map((link) => (
+            <span key={link}>{link}</span>
+          ))}
         </section>
       </footer>
     );
@@ -1629,20 +2761,34 @@ export function StorefrontPage() {
   const renderHeaderAction = (action: AgoraLinkAction, className?: string) => {
     if (action.productCode) {
       return (
-        <button className={className} key={`${action.label}-${action.productCode}`} onClick={() => openProduct(action.productCode ?? '')} type="button">
+        <button
+          className={className}
+          key={`${action.label}-${action.productCode}`}
+          onClick={() => openProduct(action.productCode ?? "")}
+          type="button"
+        >
           {action.label}
         </button>
       );
     }
     if (action.collectionCode) {
       return (
-        <button className={className} key={`${action.label}-${action.collectionCode}`} onClick={() => openCollection(action.collectionCode ?? '')} type="button">
+        <button
+          className={className}
+          key={`${action.label}-${action.collectionCode}`}
+          onClick={() => openCollection(action.collectionCode ?? "")}
+          type="button"
+        >
           {action.label}
         </button>
       );
     }
     return (
-      <a className={className} href={action.path} key={`${action.label}-${action.path}`}>
+      <a
+        className={className}
+        href={action.path}
+        key={`${action.label}-${action.path}`}
+      >
         {action.label}
       </a>
     );
@@ -1650,12 +2796,18 @@ export function StorefrontPage() {
   const renderActionButton = function (action: AgoraLinkAction | undefined) {
     if (!action) return null;
     return (
-      <button className="secondary" onClick={() => openAction(action)} type="button">
+      <button
+        className="secondary"
+        onClick={() => openAction(action)}
+        type="button"
+      >
         {action.label}
       </button>
     );
   };
-  const megaMenuPrimaryAction = function (menu: AgoraMegaMenu): AgoraLinkAction {
+  const megaMenuPrimaryAction = function (
+    menu: AgoraMegaMenu,
+  ): AgoraLinkAction {
     return {
       label: menu.label,
       ...(menu.collectionCode ? { collectionCode: menu.collectionCode } : {}),
@@ -1673,15 +2825,33 @@ export function StorefrontPage() {
       <section
         aria-label={`${activeMegaMenu.label} menu`}
         className="agora-mega-menu"
+        style={{
+          top: megaMenuTop,
+          maxHeight: `calc(100dvh - ${megaMenuTop}px - 1rem)`,
+        }}
         onMouseEnter={() => setActiveMegaMenuCode(activeMegaMenu.code)}
         onMouseLeave={() => setActiveMegaMenuCode(undefined)}
       >
+        <button
+          className="agora-mega-menu-close"
+          aria-label="Close navigation menu"
+          onClick={() => setActiveMegaMenuCode(undefined)}
+          type="button"
+        >
+          Close
+        </button>
         <div className="agora-mega-menu-intro">
-          {activeMegaMenu.eyebrow ? <span>{activeMegaMenu.eyebrow}</span> : null}
+          {activeMegaMenu.eyebrow ? (
+            <span>{activeMegaMenu.eyebrow}</span>
+          ) : null}
           <h2>{activeMegaMenu.label}</h2>
           {activeMegaMenu.summary ? <p>{activeMegaMenu.summary}</p> : null}
-          <button onClick={() => openMegaMenuAction(activeMegaMenu)} type="button">
-            Explore {activeMegaMenu.label} <ArrowUpRight aria-hidden="true" size={16} />
+          <button
+            onClick={() => openMegaMenuAction(activeMegaMenu)}
+            type="button"
+          >
+            Explore {activeMegaMenu.label}{" "}
+            <ArrowUpRight aria-hidden="true" size={16} />
           </button>
         </div>
         <div className="agora-mega-menu-groups">
@@ -1692,10 +2862,13 @@ export function StorefrontPage() {
               <ul>
                 {group.links.map((link) => (
                   <li key={`${group.title}-${link.label}`}>
-                    <button onClick={() => {
-                      setActiveMegaMenuCode(undefined);
-                      openAction(link);
-                    }} type="button">
+                    <button
+                      onClick={() => {
+                        setActiveMegaMenuCode(undefined);
+                        openAction(link);
+                      }}
+                      type="button"
+                    >
                       <span>
                         {link.label}
                         {link.summary ? <small>{link.summary}</small> : null}
@@ -1711,11 +2884,29 @@ export function StorefrontPage() {
         {activeMegaMenu.featureTiles.length ? (
           <div className="agora-mega-menu-feature-grid">
             {activeMegaMenu.featureTiles.map((tile) => (
-              <button key={tile.title} onClick={() => {
-                setActiveMegaMenuCode(undefined);
-                openAction(tile.action ?? { label: tile.title, collectionCode: activeMegaMenu.collectionCode, path: activeMegaMenu.path });
-              }} type="button">
-                {tile.image ? <img alt={tile.alt ?? tile.title} src={tile.image} /> : <span className="agora-mega-menu-image-placeholder" aria-label={`${tile.title} image unavailable`} role="img" />}
+              <button
+                key={tile.title}
+                onClick={() => {
+                  setActiveMegaMenuCode(undefined);
+                  openAction(
+                    tile.action ?? {
+                      label: tile.title,
+                      collectionCode: activeMegaMenu.collectionCode,
+                      path: activeMegaMenu.path,
+                    },
+                  );
+                }}
+                type="button"
+              >
+                {tile.image ? (
+                  <img alt={tile.alt ?? tile.title} src={tile.image} />
+                ) : (
+                  <span
+                    className="agora-mega-menu-image-placeholder"
+                    aria-label={`${tile.title} image unavailable`}
+                    role="img"
+                  />
+                )}
                 {tile.badge ? <span>{tile.badge}</span> : null}
                 <strong>{tile.title}</strong>
                 {tile.summary ? <small>{tile.summary}</small> : null}
@@ -1726,10 +2917,14 @@ export function StorefrontPage() {
         {activeMegaMenu.promoStripe.length ? (
           <div className="agora-mega-menu-promo-strip">
             {activeMegaMenu.promoStripe.map((promo) => (
-              <button key={promo.label} onClick={() => {
-                setActiveMegaMenuCode(undefined);
-                openAction(promo);
-              }} type="button">
+              <button
+                key={promo.label}
+                onClick={() => {
+                  setActiveMegaMenuCode(undefined);
+                  openAction(promo);
+                }}
+                type="button"
+              >
                 {promo.eyebrow ? <small>{promo.eyebrow}</small> : null}
                 <span>{promo.label}</span>
                 {promo.text ? <em>{promo.text}</em> : null}
@@ -1743,17 +2938,27 @@ export function StorefrontPage() {
   };
 
   if (!cmsPage) {
-    const loading = cmsStatus?.toLowerCase().includes('loading');
+    const loading = cmsStatus?.toLowerCase().includes("loading");
     return (
       <main className="agora-shell agora-unpublished-shell">
-        <section className="storefront-unpublished-state" aria-live="polite" role={loading ? 'status' : 'alert'}>
+        <section
+          className="storefront-unpublished-state"
+          aria-live="polite"
+          role={loading ? "status" : "alert"}
+        >
           <NodicsBrand logoText="NODICS" subtitle="AGORA" />
-          <p className="eyebrow">{loading ? 'Preparing your experience' : 'Storefront maintenance'}</p>
-          <h1>{loading ? 'Opening the storefront.' : 'We are getting the storefront ready.'}</h1>
+          <p className="eyebrow">
+            {loading ? "Preparing your experience" : "Storefront maintenance"}
+          </p>
+          <h1>
+            {loading
+              ? "Opening the storefront."
+              : "We are getting the storefront ready."}
+          </h1>
           <p>
             {loading
-              ? 'Thanks for your patience while the latest shopping experience is being prepared.'
-              : 'The store is not available right now while we complete a content update. Please check back shortly.'}
+              ? "Thanks for your patience while the latest shopping experience is being prepared."
+              : "The store is not available right now while we complete a content update. Please check back shortly."}
           </p>
         </section>
       </main>
@@ -1762,63 +2967,148 @@ export function StorefrontPage() {
 
   return (
     <main className="agora-shell">
-      <aside className="storefront-utility-bar" aria-label="Storefront service links">
+      <aside
+        className="storefront-utility-bar"
+        aria-label="Storefront service links"
+      >
         <div className="utility-links">
           {headerContent.utilityLinks.map((item) => renderHeaderAction(item))}
         </div>
         {headerContent.preferences.length ? (
-          <div className="utility-preferences" aria-label="Storefront preferences">
+          <div
+            className="utility-preferences"
+            aria-label="Storefront preferences"
+          >
             {headerContent.preferences.map((item) => (
-              <button key={item.label} onClick={() => openAction(item)} type="button">
+              <button
+                key={item.label}
+                onClick={() => openAction(item)}
+                type="button"
+              >
                 {item.label} <ChevronDown aria-hidden="true" size={16} />
               </button>
             ))}
           </div>
         ) : null}
       </aside>
-      <header className={`storefront-header${headerScrolled ? ' is-scrolled' : ''}`}>
-        <button className="agora-brand" onClick={() => openAction({ label: 'Home', path: '/' })} type="button" aria-label="Nodics Agora home">
+      <header
+        ref={storefrontHeaderRef}
+        className={`storefront-header${headerScrolled ? " is-scrolled" : ""}`}
+      >
+        <button
+          className="agora-brand"
+          onClick={() => openAction({ label: "Home", path: "/" })}
+          type="button"
+          aria-label="Nodics Agora home"
+        >
           <NodicsBrand logoText={headerLogoText} subtitle={headerSubtitle} />
         </button>
         <nav className="nav-pills" aria-label="Storefront navigation">
-          {headerContent.megaMenus.length ? headerContent.megaMenus.map((menu) => {
-            const hasPanel = menu.groups.length || menu.featureTiles.length || menu.promoStripe.length;
-            const active = activeMegaMenuCode === menu.code || collectionCode === menu.collectionCode;
-            return (
-              <button
-                aria-expanded={hasPanel ? activeMegaMenuCode === menu.code : undefined}
-                className={active ? '' : 'secondary'}
-                key={menu.code}
-                onClick={() => hasPanel ? setActiveMegaMenuCode(menu.code) : openMegaMenuAction(menu)}
-                onFocus={() => hasPanel ? setActiveMegaMenuCode(menu.code) : undefined}
-                onMouseEnter={() => hasPanel ? setActiveMegaMenuCode(menu.code) : undefined}
-                type="button"
-              >
-                {menu.label}
-                {menu.badge ? <span className="nav-badge">{menu.badge}</span> : null}
-                {hasPanel ? <ChevronDown aria-hidden="true" size={15} /> : null}
-              </button>
-            );
-          }) : headerContent.navigation.map((item) => (
-            <button className={collectionCode === item.collectionCode ? '' : 'secondary'} key={item.label} onClick={() => item.collectionCode ? openCollection(item.collectionCode) : openAction(item)} type="button">
-              {item.label} {item.dropdown ? <ChevronDown aria-hidden="true" size={15} /> : null}
-            </button>
-          ))}
+          {headerContent.megaMenus.length
+            ? headerContent.megaMenus.map((menu) => {
+                const hasPanel =
+                  menu.groups.length ||
+                  menu.featureTiles.length ||
+                  menu.promoStripe.length;
+                const active =
+                  activeMegaMenuCode === menu.code ||
+                  Boolean(
+                    menu.collectionCode &&
+                    collectionCode === menu.collectionCode,
+                  );
+                return (
+                  <button
+                    aria-expanded={
+                      hasPanel ? activeMegaMenuCode === menu.code : undefined
+                    }
+                    className={active ? "" : "secondary"}
+                    key={menu.code}
+                    onClick={() =>
+                      hasPanel
+                        ? setActiveMegaMenuCode(menu.code)
+                        : openMegaMenuAction(menu)
+                    }
+                    onFocus={() =>
+                      !hasPanel ? setActiveMegaMenuCode(undefined) : undefined
+                    }
+                    onMouseEnter={() =>
+                      setActiveMegaMenuCode(hasPanel ? menu.code : undefined)
+                    }
+                    type="button"
+                  >
+                    {menu.label}
+                    {menu.badge ? (
+                      <span className="nav-badge">{menu.badge}</span>
+                    ) : null}
+                    {hasPanel ? (
+                      <ChevronDown aria-hidden="true" size={15} />
+                    ) : null}
+                  </button>
+                );
+              })
+            : headerContent.navigation.map((item) => (
+                <button
+                  className={
+                    collectionCode === item.collectionCode ? "" : "secondary"
+                  }
+                  key={item.label}
+                  onClick={() =>
+                    item.collectionCode
+                      ? openCollection(item.collectionCode)
+                      : openAction(item)
+                  }
+                  type="button"
+                >
+                  {item.label}{" "}
+                  {item.dropdown ? (
+                    <ChevronDown aria-hidden="true" size={15} />
+                  ) : null}
+                </button>
+              ))}
         </nav>
         <div className="commerce-actions">
-          {headerContent.searchEnabled ? <button className="icon-action" onClick={() => openProductListing('all')} type="button" aria-label="Search products"><Search aria-hidden="true" size={24} /></button> : null}
+          {headerContent.searchEnabled ? (
+            <button
+              className="icon-action"
+              onClick={() => openProductListing("all")}
+              type="button"
+              aria-label="Search products"
+            >
+              <Search aria-hidden="true" size={24} />
+            </button>
+          ) : null}
           {headerContent.accountPreviewEnabled ? (
-            <button className="icon-action" onClick={() => setAccountPanelOpen((current) => !current)} type="button" aria-label={customerSession.accessToken ? customerSession.email : 'Account'}>
+            <button
+              className="icon-action"
+              onClick={() => setAccountPanelOpen((current) => !current)}
+              type="button"
+              aria-label={
+                customerSession.accessToken ? customerSession.email : "Account"
+              }
+            >
               <UserRound aria-hidden="true" size={24} />
             </button>
           ) : null}
           {headerContent.wishlistPreviewEnabled ? (
-            <button className="icon-action" onClick={() => setView('plp')} type="button" aria-label={`Wishlist with ${wishlistProductCodes.length} items`}>
+            <button
+              className="icon-action"
+              onClick={() => setView("plp")}
+              type="button"
+              aria-label={`Wishlist with ${wishlistProductCodes.length} items`}
+            >
               <Heart aria-hidden="true" size={25} />
             </button>
           ) : null}
           {headerContent.cartPreviewEnabled ? (
-            <button className="icon-action cart-icon-action" onClick={() => setView('cart')} type="button" aria-label={`Cart (${cart.quantity})`}>
+            <button
+              className="icon-action cart-icon-action"
+              onClick={() => {
+                setView("cart");
+                window.history.pushState({}, "", "/cart");
+              }}
+              type="button"
+              aria-label={`Cart (${cart.quantity})`}
+            >
               <ShoppingBag aria-hidden="true" size={25} />
               {cart.quantity ? <span>{cart.quantity}</span> : null}
             </button>
@@ -1833,11 +3123,30 @@ export function StorefrontPage() {
               <div>
                 <p className="eyebrow">Customer account</p>
                 <h2>Signed in as {customerSession.email}</h2>
-                <p>Wishlist, compare, cart, and order self-service are synchronized with Commerce APIs.</p>
+                <p>
+                  Manage your saved items, cart, and orders from your account.
+                </p>
               </div>
-              <button onClick={openCouponWallet} type="button">My coupons</button>
-              <button className="secondary" onClick={() => { setView('orders'); if (typeof window !== 'undefined') window.history.pushState({}, '', '/orders'); void loadOrderHistory(); }} type="button">My orders</button>
-              <button className="secondary" onClick={signOut} type="button">Sign out</button>
+              <button onClick={openCouponWallet} type="button">
+                My coupons
+              </button>
+              <button
+                className="secondary"
+                onClick={() => {
+                  setAccountPanelOpen(false);
+                  setView("orders");
+                  if (typeof window !== "undefined")
+                    window.history.pushState({}, "", "/orders");
+                  void loadOrderHistory();
+                }}
+                type="button"
+              >
+                My orders
+              </button>
+
+              <button className="secondary" onClick={signOut} type="button">
+                Sign out
+              </button>
             </>
           ) : (
             <form
@@ -1848,11 +3157,30 @@ export function StorefrontPage() {
             >
               <label>
                 Customer email
-                <input aria-label="Customer email" onChange={(event) => setAuthForm((current) => ({ ...current, loginId: event.target.value }))} value={authForm.loginId} />
+                <input
+                  aria-label="Customer email"
+                  onChange={(event) =>
+                    setAuthForm((current) => ({
+                      ...current,
+                      loginId: event.target.value,
+                    }))
+                  }
+                  value={authForm.loginId}
+                />
               </label>
               <label>
                 Password
-                <input aria-label="Customer password" onChange={(event) => setAuthForm((current) => ({ ...current, password: event.target.value }))} type="password" value={authForm.password} />
+                <input
+                  aria-label="Customer password"
+                  onChange={(event) =>
+                    setAuthForm((current) => ({
+                      ...current,
+                      password: event.target.value,
+                    }))
+                  }
+                  type="password"
+                  value={authForm.password}
+                />
               </label>
               <button type="submit">Sign in</button>
             </form>
@@ -1860,110 +3188,190 @@ export function StorefrontPage() {
           {authStatus ? <p role="status">{authStatus}</p> : null}
         </section>
       ) : null}
-      {view === 'home' ? (
+      {view === "home" ? (
         <>
           {cmsHeroSlides.length ? (
-          <header className={`hero hero-fashion${useCmsHeroImages ? '' : ' hero-domain'}`}>
-            <div className="hero-banner-slider" aria-label="Featured Agora banner slides">
-              {cmsHeroSlides.map((slide, index) => (
-                <div
-                  aria-hidden={index !== activeHeroIndex}
-                  className={`hero-banner-panel${index === activeHeroIndex ? ' is-active' : ''}`}
-                  key={slide.title}
-                >
-                  {useCmsHeroImages && slide.image ? <img alt={slide.alt ?? ''} src={slide.image} /> : null}
-                </div>
-              ))}
-            </div>
-            <section className="hero-copy-card">
-              <p>{activeHeroSlide?.eyebrow}</p>
-              <h1>{activeHeroSlide?.title}</h1>
-              <form
-                className="hero-search"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  openProductListing('all');
-                }}
+            <header
+              className={`hero hero-fashion${useCmsHeroImages ? "" : " hero-domain"}`}
+            >
+              <div
+                className="hero-banner-slider"
+                aria-label="Featured Agora banner slides"
               >
-                <input
-                  aria-label="Search products"
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={headerContent.searchPlaceholder ?? 'Search products'}
-                  value={query}
-                />
-                <button type="submit">Search</button>
-              </form>
-              <div className="hero-actions">
-                {activeHeroSlide?.primaryAction ? <button onClick={() => openAction(activeHeroSlide.primaryAction)} type="button">{activeHeroSlide.primaryAction.label}</button> : null}
-                {nextHeroSlide?.secondaryAction ?? nextHeroSlide?.primaryAction ? <button className="secondary" onClick={() => openAction(nextHeroSlide?.secondaryAction ?? nextHeroSlide?.primaryAction)} type="button">{(nextHeroSlide?.secondaryAction ?? nextHeroSlide?.primaryAction)?.label}</button> : null}
+                {cmsHeroSlides.map((slide, index) => (
+                  <div
+                    aria-hidden={index !== activeHeroIndex}
+                    className={`hero-banner-panel${index === activeHeroIndex ? " is-active" : ""}`}
+                    key={slide.title}
+                  >
+                    {useCmsHeroImages && slide.image ? (
+                      <img alt={slide.alt ?? ""} src={slide.image} />
+                    ) : null}
+                  </div>
+                ))}
               </div>
-            </section>
-            <nav className="hero-slide-nav" aria-label="Featured Agora edits">
-              {cmsHeroSlides.map((slide, index) => (
-                <button
-                  aria-current={index === activeHeroIndex ? 'true' : undefined}
-                  className={index === activeHeroIndex ? 'is-active' : undefined}
-                  key={slide.title}
-                  onClick={() => setActiveHeroIndex(index)}
-                  type="button"
+              <section className="hero-copy-card">
+                <p>{activeHeroSlide?.eyebrow}</p>
+                <h1>{activeHeroSlide?.title}</h1>
+                <form
+                  className="hero-search"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    openProductListing("all");
+                  }}
                 >
-                  <span>{`0${(index + 1).toString()}`}</span>
-                  <strong>{slide.eyebrow}</strong>
-                  <small>{slide.primaryAction?.label}</small>
-                </button>
-              ))}
-            </nav>
-          </header>
+                  <input
+                    aria-label="Search products"
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder={
+                      headerContent.searchPlaceholder ?? "Search products"
+                    }
+                    value={query}
+                  />
+                  <button type="submit">Search</button>
+                </form>
+                <div className="hero-actions">
+                  {activeHeroSlide?.primaryAction ? (
+                    <button
+                      onClick={() => openAction(activeHeroSlide.primaryAction)}
+                      type="button"
+                    >
+                      {activeHeroSlide.primaryAction.label}
+                    </button>
+                  ) : null}
+                  {(nextHeroSlide?.secondaryAction ??
+                  nextHeroSlide?.primaryAction) ? (
+                    <button
+                      className="secondary"
+                      onClick={() =>
+                        openAction(
+                          nextHeroSlide?.secondaryAction ??
+                            nextHeroSlide?.primaryAction,
+                        )
+                      }
+                      type="button"
+                    >
+                      {
+                        (
+                          nextHeroSlide?.secondaryAction ??
+                          nextHeroSlide?.primaryAction
+                        )?.label
+                      }
+                    </button>
+                  ) : null}
+                </div>
+              </section>
+              <nav className="hero-slide-nav" aria-label="Featured Agora edits">
+                {cmsHeroSlides.map((slide, index) => (
+                  <button
+                    aria-current={
+                      index === activeHeroIndex ? "true" : undefined
+                    }
+                    className={
+                      index === activeHeroIndex ? "is-active" : undefined
+                    }
+                    key={slide.title}
+                    onClick={() => setActiveHeroIndex(index)}
+                    type="button"
+                  >
+                    <span>{`0${(index + 1).toString()}`}</span>
+                    <strong>{slide.eyebrow}</strong>
+                    <small>{slide.primaryAction?.label}</small>
+                  </button>
+                ))}
+              </nav>
+            </header>
           ) : null}
           {homeContent.serviceMessages.length ? (
-            <section className="service-marquee" aria-label="Storefront service promise">
+            <section
+              className="service-marquee"
+              aria-label="Storefront service promise"
+            >
               <div className="service-marquee-track">
-                {Array.from({ length: 2 }).flatMap((_, groupIndex) => homeContent.serviceMessages.map((message, messageIndex) => (
-                  <span key={`service-promise-${groupIndex.toString()}-${messageIndex.toString()}`}>
-                    <strong>{message.label}</strong>
-                    {message.text}
-                  </span>
-                )))}
+                {Array.from({ length: 2 }).flatMap((_, groupIndex) =>
+                  homeContent.serviceMessages.map((message, messageIndex) => (
+                    <span
+                      key={`service-promise-${groupIndex.toString()}-${messageIndex.toString()}`}
+                    >
+                      <strong>{message.label}</strong>
+                      {message.text}
+                    </span>
+                  )),
+                )}
               </div>
             </section>
           ) : null}
         </>
       ) : null}
       {error ? <p role="alert">{error}</p> : null}
-      {cmsStatus && view === 'home' ? <p role="status">{cmsStatus}</p> : null}
+      {cmsStatus && view === "home" ? <p role="status">{cmsStatus}</p> : null}
       {listStatus ? <p role="status">{listStatus}</p> : null}
-      {(wishlistProducts.length || compareProducts.length) ? (
-        <section className="list-summary" aria-label="Wishlist and compare summary">
+      {wishlistProducts.length || compareProducts.length ? (
+        <section
+          className="list-summary"
+          aria-label="Wishlist and compare summary"
+        >
           {wishlistProducts.length ? (
             <article>
               <h2>Wishlist</h2>
-              <p>{wishlistProducts.map((product) => product.name ?? product.productCode).join(', ')}</p>
+              <p>
+                {wishlistProducts
+                  .map((product) => product.name ?? product.productCode)
+                  .join(", ")}
+              </p>
             </article>
           ) : null}
           {compareProducts.length ? (
             <article>
               <h2>Compare</h2>
-              <p>{compareProducts.map((product) => product.name ?? product.productCode).join(' vs ')}</p>
+              <p>
+                {compareProducts
+                  .map((product) => product.name ?? product.productCode)
+                  .join(" vs ")}
+              </p>
             </article>
           ) : null}
         </section>
       ) : null}
-      {view === 'pdp' && selected ? (
+      {view === "pdp" && selected ? (
         <section className="pdp">
-          <button onClick={() => setView('plp')} type="button">{backToListingLabel}</button>
+          <button onClick={() => setView("plp")} type="button">
+            {backToListingLabel}
+          </button>
           <div className="pdp-layout">
-              <div className="pdp-gallery">
-              {(productGalleryUrls(selected, runtimeConfig.mediaBaseUrl).length ? productGalleryUrls(selected, runtimeConfig.mediaBaseUrl) : [undefined]).slice(0, 4).map((item, index) => {
-                const image = productGalleryImageUrl(selected, item, runtimeConfig.mediaBaseUrl);
-                return (
-                  <div key={`${selected.productCode}-gallery-${index.toString()}`}>
-                    {image ? <img alt={`${selected.name ?? selected.productCode} ${index + 1}`} src={image} /> : <ProductMediaPlaceholder label={index === 0 ? selected.name : undefined} product={selected} />}
-                  </div>
-                );
-              })}
+            <div className="pdp-gallery">
+              {(productGalleryUrls(selected, runtimeConfig.mediaBaseUrl).length
+                ? productGalleryUrls(selected, runtimeConfig.mediaBaseUrl)
+                : [undefined]
+              )
+                .slice(0, 4)
+                .map((item, index) => {
+                  const image = productGalleryImageUrl(
+                    selected,
+                    item,
+                    runtimeConfig.mediaBaseUrl,
+                  );
+                  return (
+                    <div
+                      key={`${selected.productCode}-gallery-${index.toString()}`}
+                    >
+                      {image ? (
+                        <img
+                          alt={`${selected.name ?? selected.productCode} ${index + 1}`}
+                          src={image}
+                        />
+                      ) : (
+                        <ProductMediaPlaceholder
+                          label={index === 0 ? selected.name : undefined}
+                          product={selected}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
             </div>
             <article>
-              <p className="muted">{selected.brand ?? 'Nodics Atelier'}</p>
+              <p className="muted">{selected.brand ?? "Nodics Atelier"}</p>
               <h2>{selected.name}</h2>
               <p>{selected.description}</p>
               <p className="price">
@@ -1973,15 +3381,32 @@ export function StorefrontPage() {
               {selectedColorOptions.length ? (
                 <div className="pdp-option-group">
                   <strong>{colorLabel}</strong>
-                  <div className="pdp-color-options" aria-label={availableColorsLabel}>
+                  <div
+                    className="pdp-color-options"
+                    aria-label={availableColorsLabel}
+                  >
                     {selectedColorOptions.map((option) => (
                       <button
                         aria-label={option.label}
                         aria-pressed={selectedColourCode === option.code}
-                        className={selectedColourCode === option.code ? 'is-active' : undefined}
+                        className={
+                          selectedColourCode === option.code
+                            ? "is-active"
+                            : undefined
+                        }
                         key={option.code}
-                        onClick={() => setSelectedVariantCode(productVariantForSelection(selected, option.code, selectedSizeCode))}
-                        style={{ '--swatch-color': option.value } as CSSProperties}
+                        onClick={() =>
+                          setSelectedVariantCode(
+                            productVariantForSelection(
+                              selected,
+                              option.code,
+                              selectedSizeCode,
+                            ),
+                          )
+                        }
+                        style={
+                          { "--swatch-color": option.value } as CSSProperties
+                        }
                         type="button"
                       >
                         <span />
@@ -1996,7 +3421,22 @@ export function StorefrontPage() {
                   <strong>{sizeLabel}</strong>
                   <div className="sizes" aria-label={availableSizesLabel}>
                     {selectedSizeOptions.map((size) => (
-                      <button className={selectedSizeCode === size ? '' : 'secondary'} key={size} onClick={() => setSelectedVariantCode(productVariantForSelection(selected, selectedColourCode, size))} type="button">{size}</button>
+                      <button
+                        className={selectedSizeCode === size ? "" : "secondary"}
+                        key={size}
+                        onClick={() =>
+                          setSelectedVariantCode(
+                            productVariantForSelection(
+                              selected,
+                              selectedColourCode,
+                              size,
+                            ),
+                          )
+                        }
+                        type="button"
+                      >
+                        {size}
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -2006,12 +3446,16 @@ export function StorefrontPage() {
                 <input
                   aria-label={quantityLabel}
                   min="1"
-                  onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
+                  onChange={(event) =>
+                    setQuantity(Math.max(1, Number(event.target.value) || 1))
+                  }
                   type="number"
                   value={quantity}
                 />
               </label>
-              <button onClick={addSelectedToCart} type="button">{addToCartLabel}</button>
+              <button onClick={addSelectedToCart} type="button">
+                {addToCartLabel}
+              </button>
               <div className="pdp-tabs">
                 <details open>
                   <summary>{descriptionLabel}</summary>
@@ -2025,19 +3469,31 @@ export function StorefrontPage() {
                   <summary>{reviewsLabel}</summary>
                   {reviewAggregate?.count ? (
                     <p>
-                      Average rating {reviewAggregate.average?.toFixed(1)} from {reviewAggregate.count} review(s)
-                      {reviewAggregate.verifiedCount ? ` · ${reviewAggregate.verifiedCount} verified` : ''}
+                      Average rating {reviewAggregate.average?.toFixed(1)} from{" "}
+                      {reviewAggregate.count} review(s)
+                      {reviewAggregate.verifiedCount
+                        ? ` · ${reviewAggregate.verifiedCount} verified`
+                        : ""}
                     </p>
-                  ) : <p>{reviewStatus ?? 'Loading reviews…'}</p>}
+                  ) : (
+                    <p>{reviewStatus ?? "Loading reviews…"}</p>
+                  )}
                   {publicReviews.length ? (
                     <div className="review-list" aria-label="Published reviews">
                       {publicReviews.map((review) => (
                         <article key={review.reviewCode ?? review.title}>
-                          <h4>{review.title ?? `${review.overallRating ?? 0} star review`}</h4>
+                          <h4>
+                            {review.title ??
+                              `${review.overallRating ?? 0} star review`}
+                          </h4>
                           <p>{review.body}</p>
                           <p className="muted">
-                            {review.overallRating ? `${review.overallRating}/5` : 'Rating pending'}
-                            {review.authenticity?.verified ? ' · Verified purchase' : ''}
+                            {review.overallRating
+                              ? `${review.overallRating}/5`
+                              : "Rating pending"}
+                            {review.authenticity?.verified
+                              ? " · Verified purchase"
+                              : ""}
                           </p>
                         </article>
                       ))}
@@ -2046,11 +3502,23 @@ export function StorefrontPage() {
                 </details>
               </div>
               <div className="quick-view-actions">
-                <button className="secondary" onClick={() => toggleWishlist(selected)} type="button">
-                  {wishlistProductCodes.includes(selected.productCode) ? removeFromWishlistLabel : addToWishlistLabel}
+                <button
+                  className="secondary"
+                  onClick={() => toggleWishlist(selected)}
+                  type="button"
+                >
+                  {wishlistProductCodes.includes(selected.productCode)
+                    ? removeFromWishlistLabel
+                    : addToWishlistLabel}
                 </button>
-                <button className="secondary" onClick={() => toggleCompare(selected)} type="button">
-                  {compareProductCodes.includes(selected.productCode) ? removeFromCompareLabel : compareLabel}
+                <button
+                  className="secondary"
+                  onClick={() => toggleCompare(selected)}
+                  type="button"
+                >
+                  {compareProductCodes.includes(selected.productCode)
+                    ? removeFromCompareLabel
+                    : compareLabel}
                 </button>
               </div>
             </article>
@@ -2065,7 +3533,9 @@ export function StorefrontPage() {
           <section className="grid" aria-label="Recommended products">
             {recommendedProducts.map((product) => (
               <ProductCardView
-                compareSelected={compareProductCodes.includes(product.productCode)}
+                compareSelected={compareProductCodes.includes(
+                  product.productCode,
+                )}
                 key={product.productCode}
                 labels={storefrontLabels}
                 onAdd={addToCart}
@@ -2075,119 +3545,381 @@ export function StorefrontPage() {
                 onQuickView={openQuickView}
                 onWishlist={toggleWishlist}
                 product={product}
-                wishlistSelected={wishlistProductCodes.includes(product.productCode)}
+                wishlistSelected={wishlistProductCodes.includes(
+                  product.productCode,
+                )}
               />
             ))}
           </section>
         </section>
-      ) : view === 'cart' ? (
+      ) : view === "cart" ? (
         <section className="cart">
           <h2>Shopping cart</h2>
           {cart.entries.length ? (
             <>
               {cart.entries.map((entry) => (
-                <article key={entry.productCode}>
+                <article key={cartEntryKey(entry)}>
                   <h3>{entry.name}</h3>
-                  {entry.variantCode ? <p className="muted">Variant: {entry.variantCode}</p> : null}
+                  {entry.variantLabel ? (
+                    <p className="muted">{entry.variantLabel}</p>
+                  ) : null}
                   <p>Quantity: {entry.quantity}</p>
                   <label className="quantity">
                     Update quantity
                     <input
                       aria-label={`Quantity for ${entry.name ?? entry.productCode}`}
                       min="0"
-                      onChange={(event) => updateCartQuantity(entry.productCode, Number(event.target.value) || 0)}
+                      onChange={(event) =>
+                        updateCartQuantity(
+                          cartEntryKey(entry),
+                          Number(event.target.value) || 0,
+                        )
+                      }
                       type="number"
                       value={entry.quantity}
                     />
                   </label>
-                  <p>{entry.price?.currency} {entry.price?.unitAmount}</p>
-                  <button className="secondary" onClick={() => removeFromCart(entry.productCode)} type="button">Remove</button>
+                  <p>
+                    {entry.price?.currency} {entry.price?.unitAmount}
+                  </p>
+                  <button
+                    className="secondary"
+                    onClick={() => removeFromCart(cartEntryKey(entry))}
+                    type="button"
+                  >
+                    Remove
+                  </button>
                 </article>
               ))}
               <aside className="cart-summary">
                 <h3>Order summary</h3>
-                <p>Subtotal: USD {cart.subtotal.toFixed(2)}</p>
-                {promotionDiscount > 0 ? <p>Promotion discount: -USD {promotionDiscount.toFixed(2)}</p> : <p className="muted">Promotion eligibility is calculated by Commerce.</p>}
-                {taxAmount > 0 ? <p>Estimated tax: USD {taxAmount.toFixed(2)}</p> : null}
-                {promotionStatus ? <p className="muted">{promotionStatus}</p> : null}
+                <p>
+                  Subtotal: {runtimeConfig.currency} {cart.subtotal.toFixed(2)}
+                </p>
+                {promotionDiscount > 0 ? (
+                  <p>
+                    Promotion discount: -{runtimeConfig.currency}{" "}
+                    {promotionDiscount.toFixed(2)}
+                  </p>
+                ) : (
+                  <p className="muted">
+                    Eligible offers will be applied at checkout.
+                  </p>
+                )}
+                {taxAmount > 0 ? (
+                  <p>
+                    Estimated tax: {runtimeConfig.currency}{" "}
+                    {taxAmount.toFixed(2)}
+                  </p>
+                ) : null}
+                {promotionStatus ? (
+                  <p className="muted">{promotionStatus}</p>
+                ) : null}
                 <p>{syncStatus}</p>
-                <button onClick={() => { void refreshBackendCartCalculation(); setCheckoutStep('customer'); setView('checkout'); }} type="button">Proceed to checkout</button>
+                <button
+                  onClick={() => {
+                    void refreshBackendCartCalculation();
+                    setCheckoutStep("customer");
+                    setView("checkout");
+                  }}
+                  type="button"
+                >
+                  Proceed to checkout
+                </button>
               </aside>
             </>
           ) : (
             <p>Your cart is empty.</p>
           )}
         </section>
-      ) : view === 'checkout' ? (
+      ) : view === "checkout" ? (
         <section className="checkout">
           <div className="checkout-header">
             <div>
               <p className="eyebrow">Secure Checkout</p>
               <h2>Customer, shipping and payment</h2>
             </div>
-            <button className="secondary" onClick={() => setView('cart')} type="button">Back to cart</button>
+            <button
+              className="secondary"
+              onClick={() => {
+                setView("cart");
+                window.history.pushState({}, "", "/cart");
+              }}
+              type="button"
+            >
+              Back to cart
+            </button>
           </div>
           <ol className="checkout-steps" aria-label="Checkout steps">
-            {(['customer', 'shipping', 'payment', 'review'] as const).map((step) => (
-              <li className={checkoutStep === step ? 'active' : ''} key={step}>
-                <button onClick={() => setCheckoutStep(step)} type="button">{step}</button>
-              </li>
-            ))}
+            {(["customer", "shipping", "payment", "review"] as const).map(
+              (step) => (
+                <li
+                  className={checkoutStep === step ? "active" : ""}
+                  key={step}
+                >
+                  <button onClick={() => setCheckoutStep(step)} type="button">
+                    {step}
+                  </button>
+                </li>
+              ),
+            )}
           </ol>
           <div className="checkout-layout">
-            <form className="checkout-card" onSubmit={(event) => event.preventDefault()}>
-              {checkoutStep === 'customer' ? (
+            <form
+              className="checkout-card"
+              onSubmit={(event) => event.preventDefault()}
+            >
+              {checkoutStep === "customer" ? (
                 <>
                   <h3>Customer details</h3>
-                  <p className="muted">{customerSession.accessToken ? `Continue as ${customerSession.mode} customer.` : 'Sign in to place a live Commerce order.'}</p>
-                  <label>Email<input aria-label="Email" onChange={(event) => updateCheckout('email', event.target.value)} value={checkoutForm.email} /></label>
-                  <label>First name<input aria-label="First name" onChange={(event) => updateCheckout('firstName', event.target.value)} value={checkoutForm.firstName} /></label>
-                  <label>Last name<input aria-label="Last name" onChange={(event) => updateCheckout('lastName', event.target.value)} value={checkoutForm.lastName} /></label>
-                  <label>Phone<input aria-label="Phone" onChange={(event) => updateCheckout('phone', event.target.value)} value={checkoutForm.phone} /></label>
-                  <button onClick={() => setCheckoutStep('shipping')} type="button">Continue to shipping</button>
+                  <p className="muted">
+                    {customerSession.accessToken
+                      ? `Continue as ${customerSession.mode} customer.`
+                      : "Sign in to place a live Commerce order."}
+                  </p>
+                  <label>
+                    Email
+                    <input
+                      aria-label="Email"
+                      onChange={(event) =>
+                        updateCheckout("email", event.target.value)
+                      }
+                      value={checkoutForm.email}
+                    />
+                  </label>
+                  <label>
+                    First name
+                    <input
+                      aria-label="First name"
+                      onChange={(event) =>
+                        updateCheckout("firstName", event.target.value)
+                      }
+                      value={checkoutForm.firstName}
+                    />
+                  </label>
+                  <label>
+                    Last name
+                    <input
+                      aria-label="Last name"
+                      onChange={(event) =>
+                        updateCheckout("lastName", event.target.value)
+                      }
+                      value={checkoutForm.lastName}
+                    />
+                  </label>
+                  <label>
+                    Phone
+                    <input
+                      aria-label="Phone"
+                      onChange={(event) =>
+                        updateCheckout("phone", event.target.value)
+                      }
+                      value={checkoutForm.phone}
+                    />
+                  </label>
+                  <button
+                    onClick={() => setCheckoutStep("shipping")}
+                    type="button"
+                  >
+                    Continue to shipping
+                  </button>
                 </>
               ) : null}
-              {checkoutStep === 'shipping' ? (
+              {checkoutStep === "shipping" ? (
                 <>
                   <h3>Shipping information</h3>
-                  <label>Address line 1<input aria-label="Address line 1" onChange={(event) => updateCheckout('line1', event.target.value)} value={checkoutForm.line1} /></label>
-                  <label>Address line 2<input aria-label="Address line 2" onChange={(event) => updateCheckout('line2', event.target.value)} value={checkoutForm.line2} /></label>
-                  <label>City<input aria-label="City" onChange={(event) => updateCheckout('city', event.target.value)} value={checkoutForm.city} /></label>
-                  <label>Region<input aria-label="Region" onChange={(event) => updateCheckout('region', event.target.value)} value={checkoutForm.region} /></label>
-                  <label>Postal code<input aria-label="Postal code" onChange={(event) => updateCheckout('postalCode', event.target.value)} value={checkoutForm.postalCode} /></label>
-                  <label>Country<input aria-label="Country" onChange={(event) => updateCheckout('country', event.target.value)} value={checkoutForm.country} /></label>
-                  <div className="shipping-methods" aria-label="Shipping methods">
+                  <label>
+                    Address line 1
+                    <input
+                      aria-label="Address line 1"
+                      onChange={(event) =>
+                        updateCheckout("line1", event.target.value)
+                      }
+                      value={checkoutForm.line1}
+                    />
+                  </label>
+                  <label>
+                    Address line 2
+                    <input
+                      aria-label="Address line 2"
+                      onChange={(event) =>
+                        updateCheckout("line2", event.target.value)
+                      }
+                      value={checkoutForm.line2}
+                    />
+                  </label>
+                  <label>
+                    City
+                    <input
+                      aria-label="City"
+                      onChange={(event) =>
+                        updateCheckout("city", event.target.value)
+                      }
+                      value={checkoutForm.city}
+                    />
+                  </label>
+                  <label>
+                    Region
+                    <input
+                      aria-label="Region"
+                      onChange={(event) =>
+                        updateCheckout("region", event.target.value)
+                      }
+                      value={checkoutForm.region}
+                    />
+                  </label>
+                  <label>
+                    Postal code
+                    <input
+                      aria-label="Postal code"
+                      onChange={(event) =>
+                        updateCheckout("postalCode", event.target.value)
+                      }
+                      value={checkoutForm.postalCode}
+                    />
+                  </label>
+                  <label>
+                    Country
+                    <input
+                      aria-label="Country"
+                      onChange={(event) =>
+                        updateCheckout("country", event.target.value)
+                      }
+                      value={checkoutForm.country}
+                    />
+                  </label>
+                  <div
+                    className="shipping-methods"
+                    aria-label="Shipping methods"
+                  >
                     {shippingMethodOptions.map((option) => (
-                      <button className={checkoutForm.shippingMethod === option.code ? '' : 'secondary'} key={option.code} onClick={() => updateCheckout('shippingMethod', option.code)} type="button">{option.label} · {option.currency} {option.price.toFixed(2)} · {option.promise}</button>
+                      <button
+                        className={
+                          checkoutForm.shippingMethod === option.code
+                            ? ""
+                            : "secondary"
+                        }
+                        key={option.code}
+                        onClick={() =>
+                          updateCheckout("shippingMethod", option.code)
+                        }
+                        type="button"
+                      >
+                        {option.label} · {option.currency}{" "}
+                        {option.price.toFixed(2)} · {option.promise}
+                      </button>
                     ))}
                   </div>
-                  <button onClick={() => setCheckoutStep('payment')} type="button">Continue to payment</button>
+                  <button
+                    disabled={!shippingMethodOptions.length}
+                    onClick={() => setCheckoutStep("payment")}
+                    type="button"
+                  >
+                    Continue to payment
+                  </button>
                 </>
               ) : null}
-              {checkoutStep === 'payment' ? (
+              {checkoutStep === "payment" ? (
                 <>
                   <h3>Payment</h3>
-                  <p className="muted">Payment token only. Raw card numbers are not collected in Agora.</p>
-                  <div className="shipping-methods" aria-label="Payment methods">
+                  <p className="muted">
+                    Demo payment. No money will be charged. Use 4242 for
+                    success, 0002 for a decline, or 0000 to cancel.
+                  </p>
+                  <div
+                    className="shipping-methods"
+                    aria-label="Payment methods"
+                  >
                     {paymentOptions.map((option) => (
-                      <button className={checkoutForm.paymentMethod === option.code ? '' : 'secondary'} key={option.code} onClick={() => updateCheckout('paymentMethod', option.code)} type="button">{option.label}</button>
+                      <button
+                        className={
+                          checkoutForm.paymentMethod === option.code
+                            ? ""
+                            : "secondary"
+                        }
+                        key={option.code}
+                        onClick={() =>
+                          updateCheckout("paymentMethod", option.code)
+                        }
+                        type="button"
+                      >
+                        {option.label}
+                      </button>
                     ))}
                   </div>
-                  <label>Name on card<input aria-label="Name on card" onChange={(event) => updateCheckout('cardName', event.target.value)} value={checkoutForm.cardName} /></label>
-                  <label>Card ending<input aria-label="Card ending" maxLength={4} onChange={(event) => updateCheckout('cardLast4', event.target.value.replace(/\D/gu, '').slice(0, 4))} value={checkoutForm.cardLast4} /></label>
-                  <label>Coupon code<input aria-label="Coupon code" onChange={(event) => updateCheckout('couponCode', event.target.value)} value={checkoutForm.couponCode} /></label>
-                  <button onClick={() => { void refreshBackendCartCalculation(); setCheckoutStep('review'); }} type="button">Review order</button>
+                  <label>
+                    Name on card
+                    <input
+                      aria-label="Name on card"
+                      onChange={(event) =>
+                        updateCheckout("cardName", event.target.value)
+                      }
+                      value={checkoutForm.cardName}
+                    />
+                  </label>
+                  <label>
+                    Card ending
+                    <input
+                      aria-label="Card ending"
+                      maxLength={4}
+                      onChange={(event) =>
+                        updateCheckout(
+                          "cardLast4",
+                          event.target.value.replace(/\D/gu, "").slice(0, 4),
+                        )
+                      }
+                      value={checkoutForm.cardLast4}
+                    />
+                  </label>
+                  <label>
+                    Coupon code
+                    <input
+                      aria-label="Coupon code"
+                      onChange={(event) =>
+                        updateCheckout("couponCode", event.target.value)
+                      }
+                      value={checkoutForm.couponCode}
+                    />
+                  </label>
+                  <button
+                    onClick={() => {
+                      void refreshBackendCartCalculation();
+                      setCheckoutStep("review");
+                    }}
+                    type="button"
+                  >
+                    Review order
+                  </button>
                 </>
               ) : null}
-              {checkoutStep === 'review' ? (
+              {checkoutStep === "review" ? (
                 <>
                   <h3>Review and place order</h3>
-                  <p>{checkoutForm.firstName} {checkoutForm.lastName} · {checkoutForm.email}</p>
-                  <p>{checkoutForm.line1}, {checkoutForm.city}, {checkoutForm.region} {checkoutForm.postalCode}</p>
-                  <p>Shipping: {selectedShippingOption.label} · {selectedShippingOption.promise}</p>
-                  <p>Payment: {maskedPaymentLabel(checkoutForm.paymentMethod, checkoutForm.cardLast4)}</p>
-                  <button disabled={checkoutBusy || cart.entries.length === 0} onClick={placeOrder} type="button">
-                    {checkoutBusy ? 'Placing order…' : 'Place order'}
+                  <p>
+                    {checkoutForm.firstName} {checkoutForm.lastName} ·{" "}
+                    {checkoutForm.email}
+                  </p>
+                  <p>
+                    {checkoutForm.line1}, {checkoutForm.city},{" "}
+                    {checkoutForm.region} {checkoutForm.postalCode}
+                  </p>
+                  <p>
+                    Shipping: {selectedShippingOption.label} ·{" "}
+                    {selectedShippingOption.promise}
+                  </p>
+                  <p>
+                    Payment:{" "}
+                    {maskedPaymentLabel(
+                      checkoutForm.paymentMethod,
+                      checkoutForm.cardLast4,
+                    )}
+                  </p>
+                  <button
+                    disabled={checkoutBusy || cart.entries.length === 0}
+                    onClick={placeOrder}
+                    type="button"
+                  >
+                    {checkoutBusy ? "Placing order…" : "Place order"}
                   </button>
                 </>
               ) : null}
@@ -2195,37 +3927,80 @@ export function StorefrontPage() {
             <aside className="cart-summary">
               <h3>Order summary</h3>
               {cart.entries.map((entry) => (
-                <p key={entry.productCode}>{entry.name} × {entry.quantity}</p>
+                <p key={cartEntryKey(entry)}>
+                  {entry.name} × {entry.quantity}
+                </p>
               ))}
               <p>{syncStatus}</p>
-              <p>Shipping: {selectedShippingOption.label} · USD {shippingAmount.toFixed(2)}</p>
+              <p>
+                Shipping: {selectedShippingOption.label} ·{" "}
+                {runtimeConfig.currency} {shippingAmount.toFixed(2)}
+              </p>
               <p className="muted">{selectedShippingOption.promise}</p>
               <p>Payment: {selectedPaymentOption.label}</p>
-              <p>Subtotal: USD {cart.subtotal.toFixed(2)}</p>
-              {promotionDiscount > 0 ? <p>Promotion: -USD {promotionDiscount.toFixed(2)}</p> : null}
-              {taxAmount > 0 ? <p>Tax: USD {taxAmount.toFixed(2)}</p> : null}
-              {promotionStatus ? <p className="muted">{promotionStatus}</p> : null}
-              <p className="price">Total: USD {totalAmount.toFixed(2)}</p>
+              <p>
+                Subtotal: {runtimeConfig.currency} {cart.subtotal.toFixed(2)}
+              </p>
+              {promotionDiscount > 0 ? (
+                <p>
+                  Promotion: -{runtimeConfig.currency}{" "}
+                  {promotionDiscount.toFixed(2)}
+                </p>
+              ) : null}
+              {taxAmount > 0 ? (
+                <p>
+                  Tax: {runtimeConfig.currency} {taxAmount.toFixed(2)}
+                </p>
+              ) : null}
+              {promotionStatus ? (
+                <p className="muted">{promotionStatus}</p>
+              ) : null}
+              <p className="price">
+                Total: {runtimeConfig.currency} {totalAmount.toFixed(2)}
+              </p>
             </aside>
           </div>
         </section>
-      ) : view === 'payment-result' && paymentResult ? (
+      ) : view === "payment-result" && paymentResult ? (
         <section className="confirmation">
           <p className="eyebrow">Payment Result</p>
           <h2>{paymentResult.title}</h2>
           <p>{paymentResult.message}</p>
-          {confirmation?.orderCode || confirmation?.code ? <p>Order reference: {confirmation.orderCode ?? confirmation.code}</p> : null}
-          {paymentResult.state === 'SUCCESS' ? (
-            <button onClick={() => setView('confirmation')} type="button">Continue to order confirmation</button>
+          {confirmation?.orderCode || confirmation?.code ? (
+            <p>
+              Order reference: {confirmation.orderCode ?? confirmation.code}
+            </p>
           ) : null}
-          {paymentResult.state === 'PENDING' ? (
-            <button onClick={() => { setSelectedOrderCode(confirmedOrderCode); setView('orders'); void loadOrderHistory(customerSession, confirmedOrderCode); }} type="button">Track payment status</button>
+          {paymentResult.state === "SUCCESS" ? (
+            <button onClick={() => setView("confirmation")} type="button">
+              Continue to order confirmation
+            </button>
+          ) : null}
+          {paymentResult.state === "PENDING" ? (
+            <button
+              onClick={() => {
+                setSelectedOrderCode(confirmedOrderCode);
+                setView("orders");
+                void loadOrderHistory(customerSession, confirmedOrderCode);
+              }}
+              type="button"
+            >
+              Track payment status
+            </button>
           ) : null}
           {paymentResult.retryAvailable ? (
-            <button onClick={() => { setCheckoutStep('payment'); setView('checkout'); }} type="button">Retry payment</button>
+            <button
+              onClick={() => {
+                setCheckoutStep("payment");
+                setView("checkout");
+              }}
+              type="button"
+            >
+              Retry payment
+            </button>
           ) : null}
         </section>
-      ) : view === 'confirmation' && confirmation ? (
+      ) : view === "confirmation" && confirmation ? (
         <section className="confirmation">
           <p className="eyebrow">Order Confirmation</p>
           <h2>Thank you, {checkoutForm.firstName}</h2>
@@ -2233,61 +4008,182 @@ export function StorefrontPage() {
           <article>
             <h3>Order {confirmedOrderCode}</h3>
             <p>Status: {confirmedStatus}</p>
-            <p>Confirmation sent to {checkoutForm.email}</p>
-            <p>Shipping: {selectedShippingOption.label} · {selectedShippingOption.promise}</p>
-            <p>Ship to: {checkoutForm.line1}, {checkoutForm.city}, {checkoutForm.region} {checkoutForm.postalCode}</p>
-            <p>Payment: {maskedPaymentLabel(checkoutForm.paymentMethod, checkoutForm.cardLast4)}</p>
-            <p>Total: USD {confirmedTotal.toFixed(2)}</p>
-            {orderDetail?.entries?.length ? <p>Backend order entries: {orderDetail.entries.length}</p> : null}
-            {completedConfirmationSteps.length ? (
-              <ul className="confirmation-steps" aria-label="Completed checkout steps">
-                {completedConfirmationSteps.map((step) => <li key={step}>{step}</li>)}
-              </ul>
+            <p>Contact email: {checkoutForm.email}</p>
+            <p>
+              Shipping: {selectedShippingOption.label} ·{" "}
+              {selectedShippingOption.promise}
+            </p>
+            <p>
+              Ship to: {checkoutForm.line1}, {checkoutForm.city},{" "}
+              {checkoutForm.region} {checkoutForm.postalCode}
+            </p>
+            <p>
+              Payment:{" "}
+              {maskedPaymentLabel(
+                checkoutForm.paymentMethod,
+                checkoutForm.cardLast4,
+              )}
+            </p>
+            <p>
+              Total:{" "}
+              {orderHistory.find((order) => order.code === activeOrderCode)
+                ?.currency ?? runtimeConfig.currency}{" "}
+              {confirmedTotal.toFixed(2)}
+            </p>
+            {orderDetail?.entries?.length ? (
+              <p>Items in this order: {orderDetail.entries.length}</p>
             ) : null}
           </article>
           <div className="quick-view-actions">
-            <button onClick={() => { setSelectedOrderCode(confirmedOrderCode); setView('orders'); void loadOrderHistory(customerSession, confirmedOrderCode); }} type="button">View order</button>
-            <button className="secondary" onClick={openCouponWallet} type="button">My coupons</button>
-            <button className="secondary" onClick={() => requestLifecycle('CANCELLATION')} type="button">Request cancellation</button>
-            <button className="secondary" onClick={() => requestLifecycle('RETURN')} type="button">Request return</button>
-            <button className="secondary" onClick={() => requestLifecycle('REFUND')} type="button">Request refund status</button>
-            <button className="secondary" onClick={() => requestLifecycle('EXCHANGE')} type="button">Request exchange</button>
-            <button className="secondary" onClick={() => requestLifecycle('REPLACEMENT')} type="button">Request replacement</button>
-            <button className="secondary" onClick={() => requestLifecycle('APPEAL')} type="button">Appeal lifecycle decision</button>
+            <button
+              onClick={() => {
+                setSelectedOrderCode(confirmedOrderCode);
+                setView("orders");
+                void loadOrderHistory(customerSession, confirmedOrderCode);
+              }}
+              type="button"
+            >
+              View order
+            </button>
+            <button
+              className="secondary"
+              onClick={openCouponWallet}
+              type="button"
+            >
+              My coupons
+            </button>
           </div>
+          <details className="order-support-actions">
+            <summary>Need help with this order?</summary>
+            <div className="quick-view-actions">
+              <button
+                className="secondary"
+                onClick={() => requestLifecycle("CANCELLATION")}
+                type="button"
+              >
+                Request cancellation
+              </button>
+              <button
+                className="secondary"
+                onClick={() => requestLifecycle("RETURN")}
+                type="button"
+              >
+                Request return
+              </button>
+              <button
+                className="secondary"
+                onClick={() => requestLifecycle("REFUND")}
+                type="button"
+              >
+                Request refund status
+              </button>
+              <button
+                className="secondary"
+                onClick={() => requestLifecycle("EXCHANGE")}
+                type="button"
+              >
+                Request exchange
+              </button>
+              <button
+                className="secondary"
+                onClick={() => requestLifecycle("REPLACEMENT")}
+                type="button"
+              >
+                Request replacement
+              </button>
+              <button
+                className="secondary"
+                onClick={() => requestLifecycle("APPEAL")}
+                type="button"
+              >
+                Appeal lifecycle decision
+              </button>
+            </div>
+          </details>
           {lifecycleStatus ? <p role="status">{lifecycleStatus}</p> : null}
-          <button onClick={() => setView('home')} type="button">Continue shopping</button>
+          <button onClick={() => setView("home")} type="button">
+            Continue shopping
+          </button>
         </section>
-      ) : view === 'coupons' ? (
+      ) : view === "coupons" ? (
         <section className="confirmation digital-wallet">
           <p className="eyebrow">Coupon Wallet</p>
           <h2>My Coupon Codes</h2>
           <div className="quick-view-actions">
-            <button className="secondary" onClick={() => void loadCouponWallet()} type="button">Refresh coupons</button>
-            <button className="secondary" onClick={() => openProductListing('all')} type="button">Shop products</button>
+            <button
+              className="secondary"
+              onClick={() => void loadCouponWallet()}
+              type="button"
+            >
+              Refresh coupons
+            </button>
+            <button
+              className="secondary"
+              onClick={() => openProductListing("all")}
+              type="button"
+            >
+              Shop products
+            </button>
           </div>
-          {digitalWalletStatus ? <p role="status">{digitalWalletStatus}</p> : null}
-          {!customerSession.accessToken ? <p>Sign in to view purchased coupon codes.</p> : null}
+          {digitalWalletStatus ? (
+            <p role="status">{digitalWalletStatus}</p>
+          ) : null}
+          {!customerSession.accessToken ? (
+            <p>Sign in to view purchased coupon codes.</p>
+          ) : null}
           {digitalEntitlements.length ? (
-            <section aria-label="Purchased coupon codes" className="wallet-grid">
+            <section
+              aria-label="Purchased coupon codes"
+              className="wallet-grid"
+            >
               {digitalEntitlements.map((entitlement) => {
                 const token = revealedCouponTokens[entitlement.code];
                 return (
-                  <article className="checkout-card wallet-card" key={entitlement.code}>
+                  <article
+                    className="checkout-card wallet-card"
+                    key={entitlement.code}
+                  >
                     <div>
-                      <p className="eyebrow">{entitlement.digitalDeliveryType === 'COUPON_CODE' ? 'Digital coupon code' : humanizeCodeLabel(entitlement.digitalDeliveryType ?? 'Digital entitlement')}</p>
+                      <p className="eyebrow">
+                        {entitlement.digitalDeliveryType === "COUPON_CODE"
+                          ? "Digital coupon code"
+                          : humanizeCodeLabel(
+                              entitlement.digitalDeliveryType ??
+                                "Digital entitlement",
+                            )}
+                      </p>
                       <h3>{humanizeCodeLabel(entitlement.productCode)}</h3>
-                      <p>Status: {entitlement.status} · Claim: {entitlement.claimStatus ?? 'UNCLAIMED'}</p>
-                      {entitlement.orderCode ? <p>Purchased from order {entitlement.orderCode}</p> : null}
-                      {entitlement.providerCode ? <p className="muted">Allocated code reference: {entitlement.providerCode}</p> : null}
+                      <p>
+                        Status: {entitlement.status} · Claim:{" "}
+                        {entitlement.claimStatus ?? "UNCLAIMED"}
+                      </p>
+                      {entitlement.orderCode ? (
+                        <p>Purchased from order {entitlement.orderCode}</p>
+                      ) : null}
+                      {entitlement.providerCode ? (
+                        <p className="muted">
+                          Allocated code reference: {entitlement.providerCode}
+                        </p>
+                      ) : null}
                     </div>
                     {token ? (
                       <div className="coupon-token">
                         <span>{token}</span>
-                        <button onClick={() => useRevealedCoupon(token)} type="button">Use at checkout</button>
+                        <button
+                          onClick={() => useRevealedCoupon(token)}
+                          type="button"
+                        >
+                          Use at checkout
+                        </button>
                       </div>
                     ) : (
-                      <button disabled={entitlement.status !== 'ACTIVE'} onClick={() => revealCoupon(entitlement.code)} type="button">Reveal code</button>
+                      <button
+                        disabled={entitlement.status !== "ACTIVE"}
+                        onClick={() => revealCoupon(entitlement.code)}
+                        type="button"
+                      >
+                        Reveal code
+                      </button>
                     )}
                   </article>
                 );
@@ -2295,18 +4191,36 @@ export function StorefrontPage() {
             </section>
           ) : null}
         </section>
-      ) : view === 'orders' ? (
+      ) : view === "orders" ? (
         <section className="confirmation">
           <p className="eyebrow">Order History</p>
           <h2>My Orders</h2>
-          <button className="secondary" onClick={() => void loadOrderHistory()} type="button">Refresh orders</button>
-          {orderHistoryStatus ? <p role="status">{orderHistoryStatus}</p> : null}
-          {!customerSession.accessToken ? <p>Sign in to view order history.</p> : null}
+          <button
+            className="secondary"
+            onClick={() => void loadOrderHistory()}
+            type="button"
+          >
+            Refresh orders
+          </button>
+          {orderHistoryStatus ? (
+            <p role="status">{orderHistoryStatus}</p>
+          ) : null}
+          {!customerSession.accessToken ? (
+            <p>Sign in to view order history.</p>
+          ) : null}
           {orderHistory.length ? (
             <section aria-label="Order history list" className="checkout-card">
               {orderHistory.map((order) => (
-                <button className={activeOrderCode === order.code ? '' : 'secondary'} key={order.code} onClick={() => void loadOrderDetail(order.code)} type="button">
-                  {order.code} · {order.status}{order.totalAmount ? ` · ${order.currency ?? 'USD'} ${order.totalAmount}` : ''}
+                <button
+                  className={activeOrderCode === order.code ? "" : "secondary"}
+                  key={order.code}
+                  onClick={() => void loadOrderDetail(order.code)}
+                  type="button"
+                >
+                  {order.code} · {order.status}
+                  {order.totalAmount
+                    ? ` · ${order.currency ?? runtimeConfig.currency} ${Number(order.totalAmount).toFixed(2)}`
+                    : ""}
                 </button>
               ))}
             </section>
@@ -2315,29 +4229,71 @@ export function StorefrontPage() {
             <article>
               <h3>Order {activeOrderCode}</h3>
               <p>Status: {confirmedStatus}</p>
-              <p>Total: USD {confirmedTotal.toFixed(2)}</p>
-              <p>Shipping: {selectedShippingOption.label} · {selectedShippingOption.promise}</p>
-              <p>Payment: {maskedPaymentLabel(checkoutForm.paymentMethod, checkoutForm.cardLast4)}</p>
-              <p>Cart: {orderDetail?.order.cartCode ?? confirmation?.cartCode ?? 'local checkout'}</p>
-              {orderDetail?.entries?.length ? <p>Backend order entries: {orderDetail.entries.length}</p> : null}
-            <p>Lifecycle records: {lifecycleRecords.length}</p>
-            {lifecycleRecords.length ? (
-              <ul aria-label="Lifecycle request status">
-                {lifecycleRecords.map((record) => (
-                    <li key={record.code ?? `${record.orderCode}:${record.requestType}`}>
+              <p>
+                Total:{" "}
+                {orderHistory.find((order) => order.code === activeOrderCode)
+                  ?.currency ?? runtimeConfig.currency}{" "}
+                {confirmedTotal.toFixed(2)}
+              </p>
+              <p>
+                Shipping: {selectedShippingOption.label} ·{" "}
+                {selectedShippingOption.promise}
+              </p>
+              <p>
+                Payment:{" "}
+                {maskedPaymentLabel(
+                  checkoutForm.paymentMethod,
+                  checkoutForm.cardLast4,
+                )}
+              </p>
+              <p>
+                Cart:{" "}
+                {orderDetail?.order.cartCode ??
+                  confirmation?.cartCode ??
+                  "local checkout"}
+              </p>
+              {orderDetail?.entries?.length ? (
+                <p>Items in this order: {orderDetail.entries.length}</p>
+              ) : null}
+              <p>Lifecycle records: {lifecycleRecords.length}</p>
+              {lifecycleRecords.length ? (
+                <ul aria-label="Lifecycle request status">
+                  {lifecycleRecords.map((record) => (
+                    <li
+                      key={
+                        record.code ??
+                        `${record.orderCode}:${record.requestType}`
+                      }
+                    >
                       {record.requestType} · {record.status}
-                      {record.rmaCode ? ` · RMA ${record.rmaCode}` : ''}
-                      {record.refundPreview?.status ? ` · refund ${record.refundPreview.status}` : ''}
-                      {record.replacementSelectionRequired ? ' · replacement selection required' : ''}
-                      {record.appealEvidenceRequired ? ' · appeal evidence required' : ''}
-                      {lifecycleEvidenceLabel(record, 'disposition') ? ` · disposition ${lifecycleEvidenceLabel(record, 'disposition')}` : ''}
-                      {lifecycleTrackingSummary(record) ? ` · ${lifecycleTrackingSummary(record)}` : ''}
+                      {record.rmaCode ? ` · RMA ${record.rmaCode}` : ""}
+                      {record.refundPreview?.status
+                        ? ` · refund ${record.refundPreview.status}`
+                        : ""}
+                      {record.replacementSelectionRequired
+                        ? " · replacement selection required"
+                        : ""}
+                      {record.appealEvidenceRequired
+                        ? " · appeal evidence required"
+                        : ""}
+                      {lifecycleEvidenceLabel(record, "disposition")
+                        ? ` · disposition ${lifecycleEvidenceLabel(record, "disposition")}`
+                        : ""}
+                      {lifecycleTrackingSummary(record)
+                        ? ` · ${lifecycleTrackingSummary(record)}`
+                        : ""}
                       <ol aria-label={`${record.requestType} timeline`}>
-                        {lifecycleTimeline(record).map((step) => <li key={step}>{step}</li>)}
+                        {lifecycleTimeline(record).map((step) => (
+                          <li key={step}>{step}</li>
+                        ))}
                       </ol>
                       {lifecycleAutomationPlan(record).length ? (
-                        <ol aria-label={`${record.requestType} automation plan`}>
-                          {lifecycleAutomationPlan(record).map((step) => <li key={step}>{step}</li>)}
+                        <ol
+                          aria-label={`${record.requestType} automation plan`}
+                        >
+                          {lifecycleAutomationPlan(record).map((step) => (
+                            <li key={step}>{step}</li>
+                          ))}
                         </ol>
                       ) : null}
                     </li>
@@ -2346,68 +4302,238 @@ export function StorefrontPage() {
               ) : null}
             </article>
           ) : null}
-          <form className="checkout-card" onSubmit={(event) => event.preventDefault()}>
+          <form
+            className="checkout-card"
+            onSubmit={(event) => event.preventDefault()}
+          >
             <h3>Lifecycle request details</h3>
-            <p className="muted">Select a request type, then provide only the fields relevant to that customer intent.</p>
+            <p className="muted">
+              Select a request type, then provide only the fields relevant to
+              that customer intent.
+            </p>
             <div className="chip-row" aria-label="Lifecycle request type">
               {lifecycleTypes.map((requestType) => (
-                <button className={selectedLifecycleType === requestType ? '' : 'secondary'} key={requestType} onClick={() => {
-                  setSelectedLifecycleType(requestType);
-                  setLifecycleForm((current) => ({ ...current, reasonCode: lifecycleReasonOptions[requestType][0] }));
-                }} type="button">{requestType}</button>
+                <button
+                  className={
+                    selectedLifecycleType === requestType ? "" : "secondary"
+                  }
+                  key={requestType}
+                  onClick={() => {
+                    setSelectedLifecycleType(requestType);
+                    setLifecycleForm((current) => ({
+                      ...current,
+                      reasonCode: lifecycleReasonOptions[requestType][0],
+                    }));
+                  }}
+                  type="button"
+                >
+                  {requestType}
+                </button>
               ))}
             </div>
-            <p className="muted">{lifecycleFormGuidance[selectedLifecycleType]}</p>
+            <p className="muted">
+              {lifecycleFormGuidance[selectedLifecycleType]}
+            </p>
             <label>
               Reason code
-              <select aria-label="Lifecycle reason code" onChange={(event) => setLifecycleForm((current) => ({ ...current, reasonCode: event.target.value }))} value={lifecycleForm.reasonCode}>
-                {reasonOptions.map((reasonCode) => <option key={reasonCode} value={reasonCode}>{reasonCode}</option>)}
+              <select
+                aria-label="Lifecycle reason code"
+                onChange={(event) =>
+                  setLifecycleForm((current) => ({
+                    ...current,
+                    reasonCode: event.target.value,
+                  }))
+                }
+                value={lifecycleForm.reasonCode}
+              >
+                {reasonOptions.map((reasonCode) => (
+                  <option key={reasonCode} value={reasonCode}>
+                    {reasonCode}
+                  </option>
+                ))}
               </select>
             </label>
-            <label>Item quantity<input aria-label="Lifecycle quantity" onChange={(event) => setLifecycleForm((current) => ({ ...current, quantity: event.target.value.replace(/\D/gu, '') || '1' }))} value={lifecycleForm.quantity} /></label>
-            {selectedLifecycleType === 'EXCHANGE' || selectedLifecycleType === 'REPLACEMENT' ? (
+            <label>
+              Item quantity
+              <input
+                aria-label="Lifecycle quantity"
+                onChange={(event) =>
+                  setLifecycleForm((current) => ({
+                    ...current,
+                    quantity: event.target.value.replace(/\D/gu, "") || "1",
+                  }))
+                }
+                value={lifecycleForm.quantity}
+              />
+            </label>
+            {selectedLifecycleType === "EXCHANGE" ||
+            selectedLifecycleType === "REPLACEMENT" ? (
               <>
-                <label>Replacement product code<input aria-label="Replacement product code" onChange={(event) => setLifecycleForm((current) => ({ ...current, replacementProductCode: event.target.value }))} placeholder="Optional replacement SKU/product" value={lifecycleForm.replacementProductCode} /></label>
+                <label>
+                  Replacement product code
+                  <input
+                    aria-label="Replacement product code"
+                    onChange={(event) =>
+                      setLifecycleForm((current) => ({
+                        ...current,
+                        replacementProductCode: event.target.value,
+                      }))
+                    }
+                    placeholder="Optional replacement SKU/product"
+                    value={lifecycleForm.replacementProductCode}
+                  />
+                </label>
                 <label>
                   Preferred resolution
-                  <select aria-label="Preferred resolution" onChange={(event) => setLifecycleForm((current) => ({ ...current, preferredResolution: event.target.value }))} value={lifecycleForm.preferredResolution}>
-                    {preferredResolutionOptions.map((resolution) => <option key={resolution} value={resolution}>{resolution}</option>)}
+                  <select
+                    aria-label="Preferred resolution"
+                    onChange={(event) =>
+                      setLifecycleForm((current) => ({
+                        ...current,
+                        preferredResolution: event.target.value,
+                      }))
+                    }
+                    value={lifecycleForm.preferredResolution}
+                  >
+                    {preferredResolutionOptions.map((resolution) => (
+                      <option key={resolution} value={resolution}>
+                        {resolution}
+                      </option>
+                    ))}
                   </select>
                 </label>
               </>
             ) : null}
-            {selectedLifecycleType === 'APPEAL' ? (
+            {selectedLifecycleType === "APPEAL" ? (
               <>
-                <label>Appeal reference code<input aria-label="Appeal reference code" onChange={(event) => setLifecycleForm((current) => ({ ...current, appealReferenceCode: event.target.value }))} placeholder="Rejected request or refund reference" value={lifecycleForm.appealReferenceCode} /></label>
-                <label>Appeal reason<input aria-label="Appeal reason" onChange={(event) => setLifecycleForm((current) => ({ ...current, appealReason: event.target.value }))} placeholder="Why should the decision be reviewed?" value={lifecycleForm.appealReason} /></label>
+                <label>
+                  Appeal reference code
+                  <input
+                    aria-label="Appeal reference code"
+                    onChange={(event) =>
+                      setLifecycleForm((current) => ({
+                        ...current,
+                        appealReferenceCode: event.target.value,
+                      }))
+                    }
+                    placeholder="Rejected request or refund reference"
+                    value={lifecycleForm.appealReferenceCode}
+                  />
+                </label>
+                <label>
+                  Appeal reason
+                  <input
+                    aria-label="Appeal reason"
+                    onChange={(event) =>
+                      setLifecycleForm((current) => ({
+                        ...current,
+                        appealReason: event.target.value,
+                      }))
+                    }
+                    placeholder="Why should the decision be reviewed?"
+                    value={lifecycleForm.appealReason}
+                  />
+                </label>
               </>
             ) : null}
             <label>
               Return method
-              <select aria-label="Return method" onChange={(event) => setLifecycleForm((current) => ({ ...current, returnMethod: event.target.value }))} value={lifecycleForm.returnMethod}>
-                {returnMethodOptions.map((method) => <option key={method.code} value={method.code}>{method.label} · {method.promise ?? method.code}</option>)}
+              <select
+                aria-label="Return method"
+                onChange={(event) =>
+                  setLifecycleForm((current) => ({
+                    ...current,
+                    returnMethod: event.target.value,
+                  }))
+                }
+                value={lifecycleForm.returnMethod}
+              >
+                {returnMethodOptions.map((method) => (
+                  <option key={method.code} value={method.code}>
+                    {method.label} · {method.promise ?? method.code}
+                  </option>
+                ))}
               </select>
             </label>
             <label>
               Refund method
-              <select aria-label="Refund method" onChange={(event) => setLifecycleForm((current) => ({ ...current, refundMethod: event.target.value }))} value={lifecycleForm.refundMethod}>
-                {refundMethodOptions.map((method) => <option key={method} value={method}>{method}</option>)}
+              <select
+                aria-label="Refund method"
+                onChange={(event) =>
+                  setLifecycleForm((current) => ({
+                    ...current,
+                    refundMethod: event.target.value,
+                  }))
+                }
+                value={lifecycleForm.refundMethod}
+              >
+                {refundMethodOptions.map((method) => (
+                  <option key={method} value={method}>
+                    {method}
+                  </option>
+                ))}
               </select>
             </label>
-            <label>Comment<input aria-label="Lifecycle comment" onChange={(event) => setLifecycleForm((current) => ({ ...current, comment: event.target.value }))} value={lifecycleForm.comment} /></label>
-            {cart.entries.length ? <p className="muted">Selected products: {cart.entries.map((entry) => `${entry.name} × ${entry.quantity}`).join(', ')}</p> : null}
+            <label>
+              Comment
+              <input
+                aria-label="Lifecycle comment"
+                onChange={(event) =>
+                  setLifecycleForm((current) => ({
+                    ...current,
+                    comment: event.target.value,
+                  }))
+                }
+                value={lifecycleForm.comment}
+              />
+            </label>
+            {cart.entries.length ? (
+              <p className="muted">
+                Selected products:{" "}
+                {cart.entries
+                  .map((entry) => `${entry.name} × ${entry.quantity}`)
+                  .join(", ")}
+              </p>
+            ) : null}
             {lifecyclePreview ? (
-              <aside className="cart-summary" aria-label="Lifecycle eligibility preview">
+              <aside
+                className="cart-summary"
+                aria-label="Lifecycle eligibility preview"
+              >
                 <h4>Eligibility preview</h4>
-                <p>Status: {String(lifecyclePreview.status ?? 'PREVIEWED')}</p>
+                <p>Status: {String(lifecyclePreview.status ?? "PREVIEWED")}</p>
                 <p>Eligible: {String(lifecyclePreview.eligible ?? true)}</p>
-                {typeof lifecyclePreview.rmaCode === 'string' ? <p>RMA: {lifecyclePreview.rmaCode}</p> : null}
-                {Array.isArray(lifecyclePreview.reasonCodes) ? <p>Reasons: {lifecyclePreview.reasonCodes.join(', ')}</p> : null}
+                {typeof lifecyclePreview.rmaCode === "string" ? (
+                  <p>RMA: {lifecyclePreview.rmaCode}</p>
+                ) : null}
+                {Array.isArray(lifecyclePreview.reasonCodes) ? (
+                  <p>Reasons: {lifecyclePreview.reasonCodes.join(", ")}</p>
+                ) : null}
                 {Array.isArray(lifecyclePreview.automationPlan) ? (
                   <ul aria-label="Lifecycle automation plan">
                     {lifecyclePreview.automationPlan.map((step) => {
-                      const plan = step as { readonly step?: string; readonly owner?: string; readonly customerVisibleState?: string; readonly trigger?: string };
-                      return <li key={`${plan.owner ?? 'owner'}:${plan.step ?? 'step'}`}>{[plan.owner, plan.step, plan.customerVisibleState, plan.trigger ? `trigger ${plan.trigger}` : undefined].filter(Boolean).join(' · ')}</li>;
+                      const plan = step as {
+                        readonly step?: string;
+                        readonly owner?: string;
+                        readonly customerVisibleState?: string;
+                        readonly trigger?: string;
+                      };
+                      return (
+                        <li
+                          key={`${plan.owner ?? "owner"}:${plan.step ?? "step"}`}
+                        >
+                          {[
+                            plan.owner,
+                            plan.step,
+                            plan.customerVisibleState,
+                            plan.trigger
+                              ? `trigger ${plan.trigger}`
+                              : undefined,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </li>
+                      );
                     })}
                   </ul>
                 ) : null}
@@ -2415,63 +4541,137 @@ export function StorefrontPage() {
             ) : null}
           </form>
           <div className="quick-view-actions">
-            <button className="secondary" onClick={() => previewLifecycle(selectedLifecycleType)} type="button">Preview {selectedLifecycleType}</button>
-            <button className="secondary" onClick={() => requestLifecycle(selectedLifecycleType)} type="button">Submit {selectedLifecycleType}</button>
+            <button
+              className="secondary"
+              onClick={() => previewLifecycle(selectedLifecycleType)}
+              type="button"
+            >
+              Preview {selectedLifecycleType}
+            </button>
+            <button
+              className="secondary"
+              onClick={() => requestLifecycle(selectedLifecycleType)}
+              type="button"
+            >
+              Submit {selectedLifecycleType}
+            </button>
           </div>
           {lifecycleStatus ? <p role="status">{lifecycleStatus}</p> : null}
         </section>
-      ) : view === 'home' ? (
+      ) : view === "home" ? (
         <>
           {homeContent.collections.length ? (
             <>
               <section className="section-header collection-section-header">
                 <div>
-                  {homeContent.collectionHeader?.eyebrow ? <p className="eyebrow">{homeContent.collectionHeader.eyebrow}</p> : null}
-                  {homeContent.collectionHeader?.heading ? <h2>{homeContent.collectionHeader.heading}</h2> : null}
+                  {homeContent.collectionHeader?.eyebrow ? (
+                    <p className="eyebrow">
+                      {homeContent.collectionHeader.eyebrow}
+                    </p>
+                  ) : null}
+                  {homeContent.collectionHeader?.heading ? (
+                    <h2>{homeContent.collectionHeader.heading}</h2>
+                  ) : null}
                 </div>
-                {homeContent.collectionHeader?.actionLabel ? <button className="collection-view-all" onClick={openCollectionsIndex} type="button">{homeContent.collectionHeader.actionLabel}</button> : null}
+                {homeContent.collectionHeader?.actionLabel ? (
+                  <button
+                    className="collection-view-all"
+                    onClick={openCollectionsIndex}
+                    type="button"
+                  >
+                    {homeContent.collectionHeader.actionLabel}
+                  </button>
+                ) : null}
               </section>
               <div className="collection-carousel-shell">
-                <button className="collection-carousel-control collection-carousel-control-previous" onClick={() => scrollCollectionCarousel('previous')} type="button" aria-label="Previous collections">
+                <button
+                  className="collection-carousel-control collection-carousel-control-previous"
+                  onClick={() => scrollCollectionCarousel("previous")}
+                  type="button"
+                  aria-label="Previous collections"
+                >
                   <ChevronLeft aria-hidden="true" size={28} />
                 </button>
                 <div className="collection-carousel-viewport">
-                  <section className="collection-grid collection-grid-photo" ref={collectionCarouselRef} aria-label="Shop by collection">
+                  <section
+                    className="collection-grid collection-grid-photo"
+                    ref={collectionCarouselRef}
+                    aria-label="Shop by collection"
+                  >
                     {homeContent.collections.map((collection) => (
-                      <button key={collection.label} onClick={() => openCollectionTile(collection)} type="button">
+                      <button
+                        key={collection.label}
+                        onClick={() => openCollectionTile(collection)}
+                        type="button"
+                      >
                         <div className="collection-card-media">
-                          {collection.image ? <img alt={collection.alt ?? ''} src={collection.image} /> : null}
+                          {collection.image ? (
+                            <img
+                              alt={collection.alt ?? ""}
+                              src={collection.image}
+                            />
+                          ) : null}
                         </div>
-                        <span className="collection-card-label">{collection.label}</span>
-                        <small className="collection-card-summary">{collection.summary}</small>
+                        <span className="collection-card-label">
+                          {collection.label}
+                        </span>
+                        <small className="collection-card-summary">
+                          {collection.summary}
+                        </small>
                       </button>
                     ))}
                   </section>
                 </div>
-                <button className="collection-carousel-control collection-carousel-control-next" onClick={() => scrollCollectionCarousel('next')} type="button" aria-label="Next collections">
+                <button
+                  className="collection-carousel-control collection-carousel-control-next"
+                  onClick={() => scrollCollectionCarousel("next")}
+                  type="button"
+                  aria-label="Next collections"
+                >
                   <ChevronRight aria-hidden="true" size={28} />
                 </button>
               </div>
             </>
           ) : null}
           {homeContent.specialOffer ? (
-            <section className="special-offer-split" aria-label={homeContent.specialOffer.heading}>
+            <section
+              className="special-offer-split"
+              aria-label={homeContent.specialOffer.heading}
+            >
               <article className="special-offer-media special-offer-media-left">
-                {homeContent.specialOffer.leftMedia.image ? <img alt={homeContent.specialOffer.leftMedia.alt ?? ''} src={homeContent.specialOffer.leftMedia.image} /> : null}
+                {homeContent.specialOffer.leftMedia.image ? (
+                  <img
+                    alt={homeContent.specialOffer.leftMedia.alt ?? ""}
+                    src={homeContent.specialOffer.leftMedia.image}
+                  />
+                ) : null}
               </article>
               <article className="special-offer-card">
-                {homeContent.specialOffer.eyebrow ? <p className="eyebrow">{homeContent.specialOffer.eyebrow}</p> : null}
+                {homeContent.specialOffer.eyebrow ? (
+                  <p className="eyebrow">{homeContent.specialOffer.eyebrow}</p>
+                ) : null}
                 <h2>{homeContent.specialOffer.heading}</h2>
-                {homeContent.specialOffer.summary ? <p>{homeContent.specialOffer.summary}</p> : null}
+                {homeContent.specialOffer.summary ? (
+                  <p>{homeContent.specialOffer.summary}</p>
+                ) : null}
                 {homeContent.specialOffer.action ? (
-                  <button className="special-offer-action" onClick={() => openAction(homeContent.specialOffer?.action)} type="button">
+                  <button
+                    className="special-offer-action"
+                    onClick={() => openAction(homeContent.specialOffer?.action)}
+                    type="button"
+                  >
                     {homeContent.specialOffer.action.label}
                     <ArrowUpRight aria-hidden="true" size={22} />
                   </button>
                 ) : null}
               </article>
               <article className="special-offer-media special-offer-media-right">
-                {homeContent.specialOffer.rightMedia.image ? <img alt={homeContent.specialOffer.rightMedia.alt ?? ''} src={homeContent.specialOffer.rightMedia.image} /> : null}
+                {homeContent.specialOffer.rightMedia.image ? (
+                  <img
+                    alt={homeContent.specialOffer.rightMedia.alt ?? ""}
+                    src={homeContent.specialOffer.rightMedia.image}
+                  />
+                ) : null}
               </article>
             </section>
           ) : null}
@@ -2479,7 +4679,9 @@ export function StorefrontPage() {
             <>
               <section className="section-header">
                 <div>
-                  {homeContent.topPicks.eyebrow ? <p className="eyebrow">{homeContent.topPicks.eyebrow}</p> : null}
+                  {homeContent.topPicks.eyebrow ? (
+                    <p className="eyebrow">{homeContent.topPicks.eyebrow}</p>
+                  ) : null}
                   <h2>{homeContent.topPicks.heading}</h2>
                 </div>
               </section>
@@ -2500,9 +4702,14 @@ export function StorefrontPage() {
           ) : null}
           <section className="promo-grid">
             {homeContent.promotions.map((promotion) => (
-              <article className={`image-promo image-promo-${promotion.variant}`} key={promotion.title}>
-                {promotion.image ? <img alt={promotion.alt ?? ''} src={promotion.image} /> : null}
-                {promotion.variant === 'visual' ? (
+              <article
+                className={`image-promo image-promo-${promotion.variant}`}
+                key={promotion.title}
+              >
+                {promotion.image ? (
+                  <img alt={promotion.alt ?? ""} src={promotion.image} />
+                ) : null}
+                {promotion.variant === "visual" ? (
                   <button
                     aria-label={`Shop ${promotion.title}`}
                     className="image-promo-hotspot"
@@ -2512,10 +4719,18 @@ export function StorefrontPage() {
                     <span aria-hidden="true" />
                   </button>
                 ) : (
-                    <div className="image-promo-content">
-                      <h3>{promotion.title}</h3>
-                      <p>{promotion.summary}</p>
-                    {promotion.action ? <button className="image-promo-link" onClick={() => openAction(promotion.action)} type="button">{promotion.action.label}</button> : null}
+                  <div className="image-promo-content">
+                    <h3>{promotion.title}</h3>
+                    <p>{promotion.summary}</p>
+                    {promotion.action ? (
+                      <button
+                        className="image-promo-link"
+                        onClick={() => openAction(promotion.action)}
+                        type="button"
+                      >
+                        {promotion.action.label}
+                      </button>
+                    ) : null}
                   </div>
                 )}
               </article>
@@ -2525,7 +4740,9 @@ export function StorefrontPage() {
             <>
               <section className="section-header">
                 <div>
-                  {homeContent.bestSelling.eyebrow ? <p className="eyebrow">{homeContent.bestSelling.eyebrow}</p> : null}
+                  {homeContent.bestSelling.eyebrow ? (
+                    <p className="eyebrow">{homeContent.bestSelling.eyebrow}</p>
+                  ) : null}
                   <h2>{homeContent.bestSelling.heading}</h2>
                 </div>
               </section>
@@ -2563,15 +4780,34 @@ export function StorefrontPage() {
             <>
               <section className="section-header">
                 <div>
-                  {homeContent.testimonialHeader?.eyebrow ? <p className="eyebrow">{homeContent.testimonialHeader.eyebrow}</p> : null}
-                  {homeContent.testimonialHeader?.heading ? <h2>{homeContent.testimonialHeader.heading}</h2> : null}
-                  {homeContent.testimonialHeader?.summary ? <p className="muted">{homeContent.testimonialHeader.summary}</p> : null}
+                  {homeContent.testimonialHeader?.eyebrow ? (
+                    <p className="eyebrow">
+                      {homeContent.testimonialHeader.eyebrow}
+                    </p>
+                  ) : null}
+                  {homeContent.testimonialHeader?.heading ? (
+                    <h2>{homeContent.testimonialHeader.heading}</h2>
+                  ) : null}
+                  {homeContent.testimonialHeader?.summary ? (
+                    <p className="muted">
+                      {homeContent.testimonialHeader.summary}
+                    </p>
+                  ) : null}
                 </div>
               </section>
-              <section className="testimonial-grid" aria-label="Customer testimonials">
+              <section
+                className="testimonial-grid"
+                aria-label="Customer testimonials"
+              >
                 {homeContent.testimonials.map((quote) => (
                   <article key={quote.name}>
-                    {quote.image ? <img alt={quote.alt ?? ''} className="testimonial-image" src={quote.image} /> : null}
+                    {quote.image ? (
+                      <img
+                        alt={quote.alt ?? ""}
+                        className="testimonial-image"
+                        src={quote.image}
+                      />
+                    ) : null}
                     <blockquote>{quote.quote}</blockquote>
                     <footer>
                       {quote.avatar ? <img alt="" src={quote.avatar} /> : null}
@@ -2589,14 +4825,31 @@ export function StorefrontPage() {
             <>
               <section className="section-header">
                 <div>
-                  {homeContent.galleryHeader?.eyebrow ? <p className="eyebrow">{homeContent.galleryHeader.eyebrow}</p> : null}
-                  {homeContent.galleryHeader?.heading ? <h2>{homeContent.galleryHeader.heading}</h2> : null}
+                  {homeContent.galleryHeader?.eyebrow ? (
+                    <p className="eyebrow">
+                      {homeContent.galleryHeader.eyebrow}
+                    </p>
+                  ) : null}
+                  {homeContent.galleryHeader?.heading ? (
+                    <h2>{homeContent.galleryHeader.heading}</h2>
+                  ) : null}
                 </div>
               </section>
-              <section className="instagram-grid" aria-label="Agora social gallery">
+              <section
+                className="instagram-grid"
+                aria-label="Agora social gallery"
+              >
                 {homeContent.gallery.map((item) => (
-                  <button key={item.mediaCode ?? item.image} onClick={() => openCollection(collections[0]?.code ?? collectionCode)} type="button">
-                    {item.image ? <img alt={item.alt ?? ''} src={item.image} /> : null}
+                  <button
+                    key={item.mediaCode ?? item.image}
+                    onClick={() =>
+                      openCollection(collections[0]?.code ?? collectionCode)
+                    }
+                    type="button"
+                  >
+                    {item.image ? (
+                      <img alt={item.alt ?? ""} src={item.image} />
+                    ) : null}
                     <span>View Product</span>
                   </button>
                 ))}
@@ -2605,29 +4858,47 @@ export function StorefrontPage() {
           ) : null}
           {renderStorefrontFooter()}
         </>
-      ) : view === 'collections' ? (
+      ) : view === "collections" ? (
         <>
           <section className="collection-index-hero">
             <div className="collection-index-copy">
-              {collectionIndexContent?.eyebrow ? <p className="eyebrow">{collectionIndexContent.eyebrow}</p> : null}
-              <h1>{collectionIndexContent?.heading ?? homeContent.collectionHeader?.heading ?? 'Shop by collection'}</h1>
-              <p>{collectionIndexContent?.summary ?? 'Explore curated category, brand, and seasonal edits. Each collection opens a Commerce-powered product listing with live filters, sort options, prices, media, and availability.'}</p>
-              <div className="collection-index-actions" aria-label="Collection page actions">
+              {collectionIndexContent?.eyebrow ? (
+                <p className="eyebrow">{collectionIndexContent.eyebrow}</p>
+              ) : null}
+              <h1>
+                {collectionIndexContent?.heading ??
+                  homeContent.collectionHeader?.heading ??
+                  "Shop by collection"}
+              </h1>
+              <p>
+                {collectionIndexContent?.summary ??
+                  "Explore curated category, brand, and seasonal edits. Each collection opens a Commerce-powered product listing with live filters, sort options, prices, media, and availability."}
+              </p>
+              <div
+                className="collection-index-actions"
+                aria-label="Collection page actions"
+              >
                 {renderActionButton(collectionIndexContent?.primaryAction)}
                 {renderActionButton(collectionIndexContent?.secondaryAction)}
               </div>
             </div>
             {collectionIndexContent?.heroMedia?.image ? (
               <div className="collection-index-hero-media">
-                <img alt={collectionIndexContent.heroMedia.alt ?? ''} src={collectionIndexContent.heroMedia.image} />
+                <img
+                  alt={collectionIndexContent.heroMedia.alt ?? ""}
+                  src={collectionIndexContent.heroMedia.image}
+                />
                 <span>{collections.length} curated paths</span>
               </div>
             ) : null}
           </section>
           {collectionIndexContent?.highlights?.length ? (
-            <section className="collection-index-highlights" aria-label="Collection shopping benefits">
+            <section
+              className="collection-index-highlights"
+              aria-label="Collection shopping benefits"
+            >
               {collectionIndexContent.highlights.map((highlight) => (
-                <article key={`${highlight.label ?? ''}-${highlight.title}`}>
+                <article key={`${highlight.label ?? ""}-${highlight.title}`}>
                   {highlight.label ? <span>{highlight.label}</span> : null}
                   <strong>{highlight.title}</strong>
                   {highlight.text ? <p>{highlight.text}</p> : null}
@@ -2635,42 +4906,73 @@ export function StorefrontPage() {
               ))}
             </section>
           ) : null}
-          <section className="collection-index-grid" aria-label="Available collections">
+          <section
+            className="collection-index-grid"
+            aria-label="Available collections"
+          >
             {collections.map((collection) => (
-              <button key={collection.code} onClick={() => openCollectionTile(collection)} type="button">
+              <button
+                key={collection.code}
+                onClick={() => openCollectionTile(collection)}
+                type="button"
+              >
                 <span className="collection-index-media">
-                  {collection.image ? <img alt={collection.alt ?? ''} src={collection.image} /> : null}
+                  {collection.image ? (
+                    <img alt={collection.alt ?? ""} src={collection.image} />
+                  ) : null}
                 </span>
                 <span className="collection-index-meta">
-                  {collection.itemCount ? <small>{collection.itemCount}</small> : null}
+                  {collection.itemCount ? (
+                    <small>{collection.itemCount}</small>
+                  ) : null}
                   <strong>{collection.label}</strong>
                   {collection.summary ? <em>{collection.summary}</em> : null}
                   <span className="collection-index-card-link">
                     Explore edit
-                    <ArrowUpRight aria-hidden="true" size={16} strokeWidth={2.4} />
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      size={16}
+                      strokeWidth={2.4}
+                    />
                   </span>
                 </span>
               </button>
             ))}
           </section>
           {collectionIndexContent?.footerNote ? (
-            <section className="collection-index-note" aria-label="Collection search note">
+            <section
+              className="collection-index-note"
+              aria-label="Collection search note"
+            >
               <p>{collectionIndexContent.footerNote}</p>
             </section>
           ) : null}
           {renderStorefrontFooter()}
         </>
-      ) : view === 'plp' ? (
+      ) : view === "plp" ? (
         <>
-          <section className={productListingHeroHasMedia ? 'plp-hero has-media' : 'plp-hero'}>
+          <section
+            className={
+              productListingHeroHasMedia ? "plp-hero has-media" : "plp-hero"
+            }
+          >
             <div className="plp-hero-copy">
-              <p className="eyebrow">{productListingContent?.eyebrow ?? listingEyebrow}</p>
+              <p className="eyebrow">
+                {productListingContent?.eyebrow ?? listingEyebrow}
+              </p>
               <h1>{listingHeading}</h1>
               <p>{listingSummary}</p>
-              {(productListingContent?.primaryAction || productListingContent?.secondaryAction) ? (
+              {productListingContent?.primaryAction ||
+              productListingContent?.secondaryAction ? (
                 <div className="plp-hero-actions">
                   {productListingContent.primaryAction ? (
-                    <button className="primary" onClick={() => openAction(productListingContent.primaryAction)} type="button">
+                    <button
+                      className="primary"
+                      onClick={() =>
+                        openAction(productListingContent.primaryAction)
+                      }
+                      type="button"
+                    >
                       {productListingContent.primaryAction.label}
                     </button>
                   ) : null}
@@ -2681,37 +4983,67 @@ export function StorefrontPage() {
             {productListingHeroMedia?.image ? (
               <div className="plp-hero-media">
                 <img
-                  alt={productListingHeroMedia.alt ?? ''}
-                  data-fallback-src={productListingHeroMedia.mediaCode === PRODUCT_LISTING_DEFAULT_HERO_MEDIA_CODE ? PRODUCT_LISTING_DEFAULT_HERO_FALLBACK_SRC : undefined}
+                  alt={productListingHeroMedia.alt ?? ""}
+                  data-fallback-src={
+                    productListingHeroMedia.mediaCode ===
+                    PRODUCT_LISTING_DEFAULT_HERO_MEDIA_CODE
+                      ? PRODUCT_LISTING_DEFAULT_HERO_FALLBACK_SRC
+                      : undefined
+                  }
                   onError={(event) => {
                     const fallbackSrc = event.currentTarget.dataset.fallbackSrc;
-                    if (fallbackSrc && !event.currentTarget.src.endsWith(fallbackSrc)) event.currentTarget.src = fallbackSrc;
+                    if (
+                      fallbackSrc &&
+                      !event.currentTarget.src.endsWith(fallbackSrc)
+                    )
+                      event.currentTarget.src = fallbackSrc;
                   }}
                   src={productListingHeroMedia.image}
                 />
                 {productListingHeroSupportingMedia.length ? (
                   <div className="plp-hero-supporting-media" aria-hidden="true">
-                    {productListingHeroSupportingMedia.slice(0, 3).map((item) => (
-                      <span key={item.mediaCode ?? item.image} className="plp-hero-supporting-image">
-                        <img alt="" src={item.image} />
-                      </span>
-                    ))}
+                    {productListingHeroSupportingMedia
+                      .slice(0, 3)
+                      .map((item) => (
+                        <span
+                          key={item.mediaCode ?? item.image}
+                          className="plp-hero-supporting-image"
+                        >
+                          <img alt="" src={item.image} />
+                        </span>
+                      ))}
                   </div>
                 ) : null}
               </div>
             ) : null}
           </section>
-          {projectedListingProducts.length && productListingContent?.projectedProducts?.heading ? (
-            <section className="plp-projected-products" aria-label={productListingContent.projectedProducts.ariaLabel ?? productListingContent.projectedProducts.heading}>
+          {projectedListingProducts.length &&
+          productListingContent?.projectedProducts?.heading ? (
+            <section
+              className="plp-projected-products"
+              aria-label={
+                productListingContent.projectedProducts.ariaLabel ??
+                productListingContent.projectedProducts.heading
+              }
+            >
               <div className="plp-projected-header">
                 <div>
-                  {productListingContent.projectedProducts.eyebrow ? <p className="eyebrow">{productListingContent.projectedProducts.eyebrow}</p> : null}
+                  {productListingContent.projectedProducts.eyebrow ? (
+                    <p className="eyebrow">
+                      {productListingContent.projectedProducts.eyebrow}
+                    </p>
+                  ) : null}
                   <h2>{productListingContent.projectedProducts.heading}</h2>
-                  {productListingContent.projectedProducts.summary ? <p>{productListingContent.projectedProducts.summary}</p> : null}
+                  {productListingContent.projectedProducts.summary ? (
+                    <p>{productListingContent.projectedProducts.summary}</p>
+                  ) : null}
                 </div>
               </div>
               <ProductCarousel
-                ariaLabel={productListingContent.projectedProducts.ariaLabel ?? productListingContent.projectedProducts.heading}
+                ariaLabel={
+                  productListingContent.projectedProducts.ariaLabel ??
+                  productListingContent.projectedProducts.heading
+                }
                 compareProductCodes={compareProductCodes}
                 direction={productListingContent.projectedProducts.direction}
                 labels={storefrontLabels}
@@ -2726,20 +5058,64 @@ export function StorefrontPage() {
               />
             </section>
           ) : null}
+          <form
+            className="plp-search"
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const form = new FormData(event.currentTarget);
+              setQuery(String(form.get("query") ?? "").trim());
+              setListingPage(1);
+            }}
+          >
+            <label htmlFor="listing-query">Search products</label>
+            <input
+              id="listing-query"
+              name="query"
+              type="search"
+              defaultValue={query}
+              key={query}
+              placeholder="Search by name or description"
+              maxLength={160}
+            />
+            <button type="submit" className="primary">
+              Search
+            </button>
+            {query ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  setListingPage(1);
+                }}
+              >
+                Clear search
+              </button>
+            ) : null}
+          </form>
           <ProductListingToolbar
             activeFilterCount={activeFilterCount}
             activeFilterLabels={activeFilterLabels}
             configuration={productListingContent}
             filters={selectedFilters}
-            layout={listingLayout}
+            layout={displayedListingLayout}
+            compact={compactListing}
             onClearFilters={clearProductFilters}
             onLayoutChange={setListingLayout}
-            onSaleOnlyChange={(selectedValue) => updateProductFilter('saleOnly', selectedValue)}
+            onSaleOnlyChange={(selectedValue) =>
+              updateProductFilter("saleOnly", selectedValue)
+            }
             onSortChange={(nextSortCode) => {
               setListingPage(1);
               setSortCode(nextSortCode);
             }}
-            onToggleFilters={() => setFiltersOpen((current) => !current)}
+            onToggleFilters={() => {
+              setDraftFilters({
+                ...selectedFilters,
+                brands: activeBrandFilters,
+              });
+              setFiltersOpen(true);
+            }}
             searchFacetsLabel="Search facets"
             searchFacetsText={searchFacetsText}
             sortCode={sortCode}
@@ -2747,23 +5123,42 @@ export function StorefrontPage() {
           <ProductFilterDrawer
             configuration={productListingContent}
             filterGroups={listingFilterGroups}
-            filters={effectiveSelectedFilters}
+            filters={draftFilters}
             isOpen={filtersOpen}
-            onApply={() => setFiltersOpen(false)}
-            onClear={clearProductFilters}
-            onClose={() => setFiltersOpen(false)}
-            onFilterToggle={(key, value) => {
-              if (key === 'brands') setBrand('');
-              toggleProductFilter(key, value);
+            onApply={() => {
+              setBrand("");
+              setSelectedFilters(draftFilters);
+              setListingPage(1);
+              setFiltersOpen(false);
             }}
-            onPriceChange={(key, value) => updateProductFilter(key, value)}
+            onClear={() => setDraftFilters(EMPTY_PRODUCT_FILTERS)}
+            onClose={() => setFiltersOpen(false)}
+            onFilterToggle={(key, value) =>
+              setDraftFilters((current) => ({
+                ...current,
+                [key]: toggleFilterValue(current[key], value),
+              }))
+            }
+            onPriceChange={(key, value) =>
+              setDraftFilters((current) => ({ ...current, [key]: value }))
+            }
             optionCount={filterOptionCount}
             optionLabel={filterOptionLabel}
           />
-          <section className={listingLayout === 'list' ? 'grid product-listing-grid is-list-view' : 'grid product-listing-grid'} data-layout={listingLayout} aria-label="Product listing">
+          <section
+            className={
+              displayedListingLayout === "list"
+                ? "grid product-listing-grid is-list-view"
+                : "grid product-listing-grid"
+            }
+            data-layout={displayedListingLayout}
+            aria-label="Product listing"
+          >
             {visibleProducts.map((product) => (
               <ProductCardView
-                compareSelected={compareProductCodes.includes(product.productCode)}
+                compareSelected={compareProductCodes.includes(
+                  product.productCode,
+                )}
                 key={product.productCode}
                 labels={storefrontLabels}
                 onAdd={addToCart}
@@ -2773,39 +5168,69 @@ export function StorefrontPage() {
                 onQuickView={openQuickView}
                 onWishlist={toggleWishlist}
                 product={product}
-                wishlistSelected={wishlistProductCodes.includes(product.productCode)}
+                wishlistSelected={wishlistProductCodes.includes(
+                  product.productCode,
+                )}
               />
             ))}
           </section>
           {!visibleProducts.length ? (
             <section className="cart-summary" aria-label="No products found">
-              <h3>No products match this storefront route yet.</h3>
+              <h3>No products found.</h3>
               <p>
-                The page is available, but the current Commerce discovery contract did not return sellable products for this
-                collection and search context. Try another collection or publish matching products to the active Agora store.
+                Try another search or clear your filters to explore more
+                products.
               </p>
-              <button onClick={() => openCollection(rootCollectionCode)} type="button">Browse available products</button>
+              <button
+                onClick={() => openCollection(rootCollectionCode)}
+                type="button"
+              >
+                Browse available products
+              </button>
             </section>
           ) : (
-            <nav className="plp-pagination" aria-label="Product listing pagination">
-              <p>{canShowNextListingPage || canShowPreviousListingPage ? listingCountText : completeStatusLabel}</p>
+            <nav
+              className="plp-pagination"
+              aria-label="Product listing pagination"
+            >
+              <p>
+                {canShowNextListingPage || canShowPreviousListingPage
+                  ? listingCountText
+                  : completeStatusLabel}
+              </p>
               <div className="plp-pagination-controls">
                 <button
                   className="plp-pagination-step"
                   disabled={!canShowPreviousListingPage}
-                  onClick={() => setListingPage((current) => Math.max(1, current - 1))}
+                  onClick={() =>
+                    setListingPage((current) => Math.max(1, current - 1))
+                  }
                   type="button"
                 >
                   Previous
                 </button>
                 {listingPaginationPages.map((pageNumber, index) => (
                   <span className="plp-pagination-page-wrap" key={pageNumber}>
-                    {index > 0 && pageNumber - (listingPaginationPages[index - 1] ?? pageNumber) > 1 ? (
-                      <span className="plp-pagination-ellipsis" aria-hidden="true">…</span>
+                    {index > 0 &&
+                    pageNumber -
+                      (listingPaginationPages[index - 1] ?? pageNumber) >
+                      1 ? (
+                      <span
+                        className="plp-pagination-ellipsis"
+                        aria-hidden="true"
+                      >
+                        …
+                      </span>
                     ) : null}
                     <button
-                      aria-current={pageNumber === listingPage ? 'page' : undefined}
-                      className={pageNumber === listingPage ? 'plp-pagination-page is-active' : 'plp-pagination-page'}
+                      aria-current={
+                        pageNumber === listingPage ? "page" : undefined
+                      }
+                      className={
+                        pageNumber === listingPage
+                          ? "plp-pagination-page is-active"
+                          : "plp-pagination-page"
+                      }
                       onClick={() => setListingPage(pageNumber)}
                       type="button"
                     >
@@ -2827,136 +5252,359 @@ export function StorefrontPage() {
           {renderStorefrontFooter()}
         </>
       ) : null}
-      {quickAdd ? createPortal(
-        <div
-          className="quick-add-backdrop"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setQuickAdd(undefined);
-          }}
-          role="presentation"
-        >
-          <section aria-label={`${quickAddLabel} ${quickAdd.name ?? quickAdd.productCode}`} aria-modal="true" className="quick-add-modal" role="dialog">
-            <button aria-label={closeQuickAddLabel} className="quick-add-close" onClick={() => setQuickAdd(undefined)} type="button">×</button>
-            <div className="quick-add-summary">
-              <div className="quick-add-thumb">
-                {quickAddImage ? <img alt={quickAdd.name ?? quickAdd.productCode} src={quickAddImage} /> : <ProductMediaPlaceholder product={quickAdd} />}
-              </div>
-              <div>
-                <h2>{quickAdd.name}</h2>
-                <p className="quick-add-price">{quickAddPrice}</p>
-              </div>
-            </div>
-            {quickAddColorOptions.length ? (
-              <section className="quick-add-option-group">
-                <p>{colorsLabel}: <strong>{quickAddColorOptions.find((option) => option.code === quickAddColourCode)?.label ?? quickAddColorOptions[0]?.label}</strong></p>
-                <div className="quick-add-color-options" aria-label={availableColorsLabel}>
-                  {quickAddColorOptions.map((option) => (
-                    <button
-                      aria-label={`${selectColorPrefix} ${option.label}`}
-                      aria-pressed={quickAddColourCode === option.code}
-                      className={quickAddColourCode === option.code ? 'is-selected' : undefined}
-                      key={option.code}
-                      onClick={() => selectQuickAddColour(option.code)}
-                      style={{ '--swatch-color': option.value } as CSSProperties}
-                      type="button"
-                    />
-                  ))}
-                </div>
-              </section>
-            ) : null}
-            {quickAddSizeOptions.length ? (
-              <section className="quick-add-option-group">
-                <p>{sizeLabel}: <strong>{quickAddSizeCode ?? quickAddSizeOptions[0]}</strong></p>
-                <div className="quick-add-size-options" aria-label={availableSizesLabel}>
-                  {quickAddSizeOptions.map((size) => (
-                    <button aria-pressed={quickAddSizeCode === size} className={quickAddSizeCode === size ? 'is-selected' : undefined} key={size} onClick={() => selectQuickAddSize(size)} type="button">{size}</button>
-                  ))}
-                </div>
-              </section>
-            ) : null}
-            <section className="quick-add-option-group">
-              <p>{quantityLabel}:</p>
-              <div className="quick-add-quantity" aria-label={quantityLabel}>
-                <button aria-label={decreaseQuantityLabel} onClick={() => setQuickAddQuantity((current) => Math.max(1, current - 1))} type="button">−</button>
-                <span>{quickAddQuantity}</span>
-                <button aria-label={increaseQuantityLabel} onClick={() => setQuickAddQuantity((current) => current + 1)} type="button">+</button>
-              </div>
-            </section>
-            <div className="quick-add-actions">
-              <button className="quick-add-cart" onClick={() => addQuickAddToCart(false)} type="button">{addToCartLabel} - {quickAddPrice}</button>
-              <button aria-label={compareProductCodes.includes(quickAdd.productCode) ? removeFromCompareLabel : compareLabel} className={compareProductCodes.includes(quickAdd.productCode) ? 'quick-add-icon is-selected' : 'quick-add-icon'} onClick={() => toggleCompare(quickAdd)} type="button">
-                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 4v12m0 0 3-3m-3 3-3-3m13 7V8m0 0 3 3m-3-3-3 3M5 4h4M15 20h4" /></svg>
-              </button>
-              <button aria-label={wishlistProductCodes.includes(quickAdd.productCode) ? removeFromWishlistLabel : addToWishlistLabel} className={wishlistProductCodes.includes(quickAdd.productCode) ? 'quick-add-icon is-selected' : 'quick-add-icon'} onClick={() => toggleWishlist(quickAdd)} type="button">
-                <Heart aria-hidden="true" size={26} strokeWidth={1.8} />
-              </button>
-            </div>
-            <button className="quick-add-buy" onClick={() => addQuickAddToCart(true)} type="button">{buyNowLabel}</button>
-          </section>
-        </div>,
-        document.body,
-      ) : null}
-      {quickView ? createPortal(
-        <div
-          className="quick-view-backdrop"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setQuickView(undefined);
-          }}
-          role="presentation"
-        >
-          <section aria-label={`${quickViewTitleLabel} ${quickView.name ?? quickView.productCode}`} aria-modal="true" className="quick-view-modal" role="dialog">
-            <button aria-label={closeQuickViewLabel} className="quick-add-close" onClick={() => setQuickView(undefined)} type="button">×</button>
-            <div className="quick-view-media">
-              {quickViewImage ? <img alt={quickView.name ?? quickView.productCode} src={quickViewImage} /> : <ProductMediaPlaceholder product={quickView} />}
-            </div>
-            <div className="quick-view-content">
-              <p className="eyebrow">{quickViewTitleLabel}</p>
-              <h2>{quickView.name}</h2>
-              <p>{quickView.summary}</p>
-              <p className="quick-add-price">{quickViewPrice}</p>
-              {quickViewColorOptions.length ? (
-                <section className="quick-add-option-group">
-                  <p>{colorsLabel}: <strong>{quickViewColorOptions.find((option) => option.code === quickViewColourCode)?.label ?? quickViewColorOptions[0]?.label}</strong></p>
-                  <div className="quick-add-color-options" aria-label={availableColorsLabel}>
-                    {quickViewColorOptions.map((option) => (
-                      <button
-                        aria-label={`${selectColorPrefix} ${option.label}`}
-                        aria-pressed={quickViewColourCode === option.code}
-                        className={quickViewColourCode === option.code ? 'is-selected' : undefined}
-                        key={option.code}
-                        onClick={() => selectQuickViewColour(option.code)}
-                        style={{ '--swatch-color': option.value } as CSSProperties}
-                        type="button"
+      {quickAdd
+        ? createPortal(
+            <div
+              className="quick-add-backdrop"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget)
+                  setQuickAdd(undefined);
+              }}
+              role="presentation"
+            >
+              <section
+                aria-label={`${quickAddLabel} ${quickAdd.name ?? quickAdd.productCode}`}
+                aria-modal="true"
+                className="quick-add-modal"
+                role="dialog"
+              >
+                <button
+                  aria-label={closeQuickAddLabel}
+                  className="quick-add-close"
+                  onClick={() => setQuickAdd(undefined)}
+                  type="button"
+                >
+                  ×
+                </button>
+                <div className="quick-add-summary">
+                  <div className="quick-add-thumb">
+                    {quickAddImage ? (
+                      <img
+                        alt={quickAdd.name ?? quickAdd.productCode}
+                        src={quickAddImage}
                       />
-                    ))}
+                    ) : (
+                      <ProductMediaPlaceholder product={quickAdd} />
+                    )}
                   </div>
-                </section>
-              ) : null}
-              {quickViewSizeOptions.length ? (
+                  <div>
+                    <h2>{quickAdd.name}</h2>
+                    <p className="quick-add-price">{quickAddPrice}</p>
+                  </div>
+                </div>
+                {quickAddColorOptions.length ? (
+                  <section className="quick-add-option-group">
+                    <p>
+                      {colorsLabel}:{" "}
+                      <strong>
+                        {quickAddColorOptions.find(
+                          (option) => option.code === quickAddColourCode,
+                        )?.label ?? quickAddColorOptions[0]?.label}
+                      </strong>
+                    </p>
+                    <div
+                      className="quick-add-color-options"
+                      aria-label={availableColorsLabel}
+                    >
+                      {quickAddColorOptions.map((option) => (
+                        <button
+                          aria-label={`${selectColorPrefix} ${option.label}`}
+                          aria-pressed={quickAddColourCode === option.code}
+                          className={
+                            quickAddColourCode === option.code
+                              ? "is-selected"
+                              : undefined
+                          }
+                          key={option.code}
+                          onClick={() => selectQuickAddColour(option.code)}
+                          style={
+                            { "--swatch-color": option.value } as CSSProperties
+                          }
+                          type="button"
+                        />
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
+                {quickAddSizeOptions.length ? (
+                  <section className="quick-add-option-group">
+                    <p>
+                      {sizeLabel}:{" "}
+                      <strong>
+                        {quickAddSizeCode ?? quickAddSizeOptions[0]}
+                      </strong>
+                    </p>
+                    <div
+                      className="quick-add-size-options"
+                      aria-label={availableSizesLabel}
+                    >
+                      {quickAddSizeOptions.map((size) => (
+                        <button
+                          aria-pressed={quickAddSizeCode === size}
+                          className={
+                            quickAddSizeCode === size
+                              ? "is-selected"
+                              : undefined
+                          }
+                          key={size}
+                          onClick={() => selectQuickAddSize(size)}
+                          type="button"
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
                 <section className="quick-add-option-group">
-                  <p>{sizeLabel}: <strong>{quickViewSizeCode ?? quickViewSizeOptions[0]}</strong></p>
-                  <div className="quick-add-size-options" aria-label={availableSizesLabel}>
-                    {quickViewSizeOptions.map((size) => (
-                      <button aria-pressed={quickViewSizeCode === size} className={quickViewSizeCode === size ? 'is-selected' : undefined} key={size} onClick={() => selectQuickViewSize(size)} type="button">{size}</button>
-                    ))}
+                  <p>{quantityLabel}:</p>
+                  <div
+                    className="quick-add-quantity"
+                    aria-label={quantityLabel}
+                  >
+                    <button
+                      aria-label={decreaseQuantityLabel}
+                      onClick={() =>
+                        setQuickAddQuantity((current) =>
+                          Math.max(1, current - 1),
+                        )
+                      }
+                      type="button"
+                    >
+                      −
+                    </button>
+                    <span>{quickAddQuantity}</span>
+                    <button
+                      aria-label={increaseQuantityLabel}
+                      onClick={() =>
+                        setQuickAddQuantity((current) => current + 1)
+                      }
+                      type="button"
+                    >
+                      +
+                    </button>
                   </div>
                 </section>
-              ) : null}
-              <div className="quick-view-actions">
-                <button className="quick-add-cart" onClick={() => addToCart(quickView, 1, quickViewSelection.variantCode)} type="button">{addToCartLabel} - {quickViewPrice}</button>
-                <button aria-label={compareProductCodes.includes(quickView.productCode) ? removeFromCompareLabel : compareLabel} className={compareProductCodes.includes(quickView.productCode) ? 'quick-add-icon is-selected' : 'quick-add-icon'} onClick={() => toggleCompare(quickView)} type="button">
-                  <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 4v12m0 0 3-3m-3 3-3-3m13 7V8m0 0 3 3m-3-3-3 3M5 4h4M15 20h4" /></svg>
+                <div className="quick-add-actions">
+                  <button
+                    className="quick-add-cart"
+                    onClick={() => addQuickAddToCart(false)}
+                    type="button"
+                  >
+                    {addToCartLabel} - {quickAddPrice}
+                  </button>
+                  <button
+                    aria-label={
+                      compareProductCodes.includes(quickAdd.productCode)
+                        ? removeFromCompareLabel
+                        : compareLabel
+                    }
+                    className={
+                      compareProductCodes.includes(quickAdd.productCode)
+                        ? "quick-add-icon is-selected"
+                        : "quick-add-icon"
+                    }
+                    onClick={() => toggleCompare(quickAdd)}
+                    type="button"
+                  >
+                    <svg aria-hidden="true" viewBox="0 0 24 24">
+                      <path d="M7 4v12m0 0 3-3m-3 3-3-3m13 7V8m0 0 3 3m-3-3-3 3M5 4h4M15 20h4" />
+                    </svg>
+                  </button>
+                  <button
+                    aria-label={
+                      wishlistProductCodes.includes(quickAdd.productCode)
+                        ? removeFromWishlistLabel
+                        : addToWishlistLabel
+                    }
+                    className={
+                      wishlistProductCodes.includes(quickAdd.productCode)
+                        ? "quick-add-icon is-selected"
+                        : "quick-add-icon"
+                    }
+                    onClick={() => toggleWishlist(quickAdd)}
+                    type="button"
+                  >
+                    <Heart aria-hidden="true" size={26} strokeWidth={1.8} />
+                  </button>
+                </div>
+                <button
+                  className="quick-add-buy"
+                  onClick={() => addQuickAddToCart(true)}
+                  type="button"
+                >
+                  {buyNowLabel}
                 </button>
-                <button aria-label={wishlistProductCodes.includes(quickView.productCode) ? removeFromWishlistLabel : addToWishlistLabel} className={wishlistProductCodes.includes(quickView.productCode) ? 'quick-add-icon is-selected' : 'quick-add-icon'} onClick={() => toggleWishlist(quickView)} type="button">
-                  <Heart aria-hidden="true" size={26} strokeWidth={1.8} />
+              </section>
+            </div>,
+            document.body,
+          )
+        : null}
+      {quickView
+        ? createPortal(
+            <div
+              className="quick-view-backdrop"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget)
+                  setQuickView(undefined);
+              }}
+              role="presentation"
+            >
+              <section
+                aria-label={`${quickViewTitleLabel} ${quickView.name ?? quickView.productCode}`}
+                aria-modal="true"
+                className="quick-view-modal"
+                role="dialog"
+              >
+                <button
+                  aria-label={closeQuickViewLabel}
+                  className="quick-add-close"
+                  onClick={() => setQuickView(undefined)}
+                  type="button"
+                >
+                  ×
                 </button>
-              </div>
-              <button className="secondary quick-view-details" onClick={() => openProduct(quickView.productCode)} type="button">{storefrontLabels.viewFullDetails ?? 'View full details'}</button>
-            </div>
-          </section>
-        </div>,
-        document.body,
-      ) : null}
+                <div className="quick-view-media">
+                  {quickViewImage ? (
+                    <img
+                      alt={quickView.name ?? quickView.productCode}
+                      src={quickViewImage}
+                    />
+                  ) : (
+                    <ProductMediaPlaceholder product={quickView} />
+                  )}
+                </div>
+                <div className="quick-view-content">
+                  <p className="eyebrow">{quickViewTitleLabel}</p>
+                  <h2>{quickView.name}</h2>
+                  <p>{quickView.summary}</p>
+                  <p className="quick-add-price">{quickViewPrice}</p>
+                  {quickViewColorOptions.length ? (
+                    <section className="quick-add-option-group">
+                      <p>
+                        {colorsLabel}:{" "}
+                        <strong>
+                          {quickViewColorOptions.find(
+                            (option) => option.code === quickViewColourCode,
+                          )?.label ?? quickViewColorOptions[0]?.label}
+                        </strong>
+                      </p>
+                      <div
+                        className="quick-add-color-options"
+                        aria-label={availableColorsLabel}
+                      >
+                        {quickViewColorOptions.map((option) => (
+                          <button
+                            aria-label={`${selectColorPrefix} ${option.label}`}
+                            aria-pressed={quickViewColourCode === option.code}
+                            className={
+                              quickViewColourCode === option.code
+                                ? "is-selected"
+                                : undefined
+                            }
+                            key={option.code}
+                            onClick={() => selectQuickViewColour(option.code)}
+                            style={
+                              {
+                                "--swatch-color": option.value,
+                              } as CSSProperties
+                            }
+                            type="button"
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  ) : null}
+                  {quickViewSizeOptions.length ? (
+                    <section className="quick-add-option-group">
+                      <p>
+                        {sizeLabel}:{" "}
+                        <strong>
+                          {quickViewSizeCode ?? quickViewSizeOptions[0]}
+                        </strong>
+                      </p>
+                      <div
+                        className="quick-add-size-options"
+                        aria-label={availableSizesLabel}
+                      >
+                        {quickViewSizeOptions.map((size) => (
+                          <button
+                            aria-pressed={quickViewSizeCode === size}
+                            className={
+                              quickViewSizeCode === size
+                                ? "is-selected"
+                                : undefined
+                            }
+                            key={size}
+                            onClick={() => selectQuickViewSize(size)}
+                            type="button"
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  ) : null}
+                  <div className="quick-view-actions">
+                    <button
+                      className="quick-add-cart"
+                      onClick={() =>
+                        addToCart(quickView, 1, quickViewSelection.variantCode)
+                      }
+                      type="button"
+                    >
+                      {addToCartLabel} - {quickViewPrice}
+                    </button>
+                    <button
+                      aria-label={
+                        compareProductCodes.includes(quickView.productCode)
+                          ? removeFromCompareLabel
+                          : compareLabel
+                      }
+                      className={
+                        compareProductCodes.includes(quickView.productCode)
+                          ? "quick-add-icon is-selected"
+                          : "quick-add-icon"
+                      }
+                      onClick={() => toggleCompare(quickView)}
+                      type="button"
+                    >
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <path d="M7 4v12m0 0 3-3m-3 3-3-3m13 7V8m0 0 3 3m-3-3-3 3M5 4h4M15 20h4" />
+                      </svg>
+                    </button>
+                    <button
+                      aria-label={
+                        wishlistProductCodes.includes(quickView.productCode)
+                          ? removeFromWishlistLabel
+                          : addToWishlistLabel
+                      }
+                      className={
+                        wishlistProductCodes.includes(quickView.productCode)
+                          ? "quick-add-icon is-selected"
+                          : "quick-add-icon"
+                      }
+                      onClick={() => toggleWishlist(quickView)}
+                      type="button"
+                    >
+                      <Heart aria-hidden="true" size={26} strokeWidth={1.8} />
+                    </button>
+                  </div>
+                  <button
+                    className="secondary quick-view-details"
+                    onClick={() =>
+                      openProduct(quickView.productCode, quickViewVariantCode)
+                    }
+                    type="button"
+                  >
+                    {storefrontLabels.viewFullDetails ?? "View full details"}
+                  </button>
+                </div>
+              </section>
+            </div>,
+            document.body,
+          )
+        : null}
     </main>
   );
 }

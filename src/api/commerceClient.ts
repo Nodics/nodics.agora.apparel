@@ -1,4 +1,4 @@
-import type { AgoraRuntimeConfig } from '../runtime/config';
+import type { AgoraRuntimeConfig } from "../runtime/config";
 
 export interface MediaDescriptor {
   readonly code?: string;
@@ -27,13 +27,20 @@ export interface ProductCard {
   readonly summary?: string;
   readonly brand?: string;
   readonly localizedAttributes?: Readonly<Record<string, unknown>>;
-  readonly media?: { readonly primary?: MediaDescriptor; readonly secondary?: MediaDescriptor; readonly gallery?: readonly MediaDescriptor[] };
+  readonly media?: {
+    readonly primary?: MediaDescriptor;
+    readonly secondary?: MediaDescriptor;
+    readonly gallery?: readonly MediaDescriptor[];
+  };
   readonly categoryCodes?: readonly string[];
   readonly collectionCodes?: readonly string[];
   readonly variantCodes?: readonly string[];
   readonly defaultVariantCode?: string;
   readonly price?: { readonly currency?: string; readonly unitAmount?: string };
-  readonly availability?: { readonly available: boolean; readonly status?: string };
+  readonly availability?: {
+    readonly available: boolean;
+    readonly status?: string;
+  };
   readonly apparel?: {
     readonly sizeSystemCode?: string;
     readonly options?: readonly {
@@ -47,8 +54,23 @@ export interface ProductCard {
       readonly fitCode?: string;
     }[];
   };
-  readonly electronics?: { readonly modelNumber?: string; readonly specifications?: Readonly<Record<string, unknown>>; readonly warranty?: { readonly duration?: number; readonly durationUnit?: string } };
-  readonly telco?: { readonly planType?: 'PREPAID' | 'POSTPAID'; readonly allowances?: readonly { readonly type?: string; readonly amount?: string; readonly unit?: string }[]; readonly simTypes?: readonly string[] };
+  readonly electronics?: {
+    readonly modelNumber?: string;
+    readonly specifications?: Readonly<Record<string, unknown>>;
+    readonly warranty?: {
+      readonly duration?: number;
+      readonly durationUnit?: string;
+    };
+  };
+  readonly telco?: {
+    readonly planType?: "PREPAID" | "POSTPAID";
+    readonly allowances?: readonly {
+      readonly type?: string;
+      readonly amount?: string;
+      readonly unit?: string;
+    }[];
+    readonly simTypes?: readonly string[];
+  };
 }
 
 export interface ProductDetail extends ProductCard {
@@ -71,6 +93,7 @@ export interface DiscoveryResponse {
 }
 
 export interface CartEntry {
+  readonly variantCode?: string;
   readonly code: string;
   readonly productCode: string;
   readonly sku: string;
@@ -80,7 +103,12 @@ export interface CartEntry {
 }
 
 export interface CartResponse {
-  readonly cart: { readonly code: string; readonly currency: string; readonly status: string; readonly revision?: string | number };
+  readonly cart: {
+    readonly code: string;
+    readonly currency: string;
+    readonly status: string;
+    readonly revision?: string | number;
+  };
   readonly entries: readonly CartEntry[];
   readonly totals?: { readonly subtotal?: string; readonly total?: string };
 }
@@ -101,7 +129,7 @@ export interface CartCalculationResponse extends CartResponse {
   };
 }
 
-export type ShoppingListType = 'WISHLIST' | 'COMPARE' | 'SAVE_FOR_LATER';
+export type ShoppingListType = "WISHLIST" | "COMPARE" | "SAVE_FOR_LATER";
 
 export interface ShoppingListEntry {
   readonly code: string;
@@ -128,11 +156,23 @@ export interface PromotionDecision {
 }
 
 export interface PromotionPreviewResponse {
-  readonly mode: 'SIMULATION';
+  readonly mode: "SIMULATION";
   readonly mutationPerformed: boolean;
-  readonly selected: readonly { readonly code: string; readonly name?: string; readonly actions?: { readonly discountAmount?: string; readonly message?: string } }[];
-  readonly explanation: readonly { readonly promotionCode: string; readonly eligible: boolean; readonly reason: string; readonly priority?: number }[];
-  readonly redemptionStateMutation: 'NONE' | 'COMMITTED';
+  readonly selected: readonly {
+    readonly code: string;
+    readonly name?: string;
+    readonly actions?: {
+      readonly discountAmount?: string;
+      readonly message?: string;
+    };
+  }[];
+  readonly explanation: readonly {
+    readonly promotionCode: string;
+    readonly eligible: boolean;
+    readonly reason: string;
+    readonly priority?: number;
+  }[];
+  readonly redemptionStateMutation: "NONE" | "COMMITTED";
   readonly decisions?: readonly PromotionDecision[];
   readonly redemption?: { readonly code: string; readonly status: string };
   readonly applied?: boolean;
@@ -159,7 +199,13 @@ export interface ReturnMethodResponse {
   }[];
 }
 
-export type OrderLifecycleRequestType = 'CANCELLATION' | 'RETURN' | 'REFUND' | 'EXCHANGE' | 'REPLACEMENT' | 'APPEAL';
+export type OrderLifecycleRequestType =
+  | "CANCELLATION"
+  | "RETURN"
+  | "REFUND"
+  | "EXCHANGE"
+  | "REPLACEMENT"
+  | "APPEAL";
 
 export interface OrderLifecyclePayload {
   readonly code: string;
@@ -296,7 +342,11 @@ interface Envelope<T> {
   readonly errors?: readonly { readonly message?: string }[];
 }
 
-export function commerceUrl(config: AgoraRuntimeConfig, path: string, query?: Readonly<Record<string, string | undefined>>) {
+export function commerceUrl(
+  config: AgoraRuntimeConfig,
+  path: string,
+  query?: Readonly<Record<string, string | undefined>>,
+) {
   const target = new URL(path, config.commerceBaseUrl);
   Object.entries(query ?? {}).forEach(([key, value]) => {
     if (value) target.searchParams.set(key, value);
@@ -314,7 +364,9 @@ async function parseBody<T>(response: Response): Promise<Envelope<T>> {
   try {
     return JSON.parse(text) as Envelope<T>;
   } catch {
-    throw new Error(`Agora commerce request returned non-JSON response: ${response.status}`);
+    throw new Error(
+      `Agora commerce request returned non-JSON response: ${response.status}`,
+    );
   }
 }
 
@@ -325,22 +377,28 @@ async function request<T>(
   query?: Readonly<Record<string, string | undefined>>,
 ): Promise<T> {
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), config.requestTimeoutMs);
+  const timeout = window.setTimeout(
+    () => controller.abort(),
+    config.requestTimeoutMs,
+  );
   try {
     const response = await fetch(commerceUrl(config, path, query), {
       ...options,
       signal: options.signal ?? controller.signal,
       headers: {
-        'content-type': 'application/json',
-        'x-enterprise-code': config.enterpriseCode,
-        'x-tenant-code': config.tenantCode,
+        "content-type": "application/json",
+        "x-enterprise-code": config.enterpriseCode,
+        "x-tenant-code": config.tenantCode,
         tenant: config.tenantCode,
         ...options.headers,
       },
     });
     const body = await parseBody<T>(response);
     if (!response.ok) {
-      const message = body.message ?? body.errors?.[0]?.message ?? `Agora commerce request failed: ${response.status}`;
+      const message =
+        body.message ??
+        body.errors?.[0]?.message ??
+        `Agora commerce request failed: ${response.status}`;
       throw new Error(message);
     }
     return envelopeData(body);
@@ -357,6 +415,7 @@ export function listProducts(
     readonly collectionCode?: string;
     readonly domainCode?: string;
     readonly q?: string;
+    readonly filters?: string;
     readonly sortCode?: string;
     readonly page?: string;
     readonly pageSize?: string;
@@ -364,7 +423,7 @@ export function listProducts(
 ) {
   return request<DiscoveryResponse>(
     config,
-    '/nodics/product/v0/products/discovery',
+    "/nodics/product/v0/products/discovery",
     {},
     {
       storeCode: config.storeCode,
@@ -374,15 +433,19 @@ export function listProducts(
       collectionCode: input.collectionCode,
       domainCode: input.domainCode,
       q: input.q,
+      filters: input.filters,
       sortCode: input.sortCode,
       page: input.page,
-      pageSize: input.pageSize ?? '10',
+      pageSize: input.pageSize ?? "10",
     },
   );
 }
 
 export function getProduct(config: AgoraRuntimeConfig, productCode: string) {
-  return request<{ readonly product: ProductDetail; readonly relatedProducts?: readonly ProductCard[] }>(
+  return request<{
+    readonly product: ProductDetail;
+    readonly relatedProducts?: readonly ProductCard[];
+  }>(
     config,
     `/nodics/product/v0/products/${encodeURIComponent(productCode)}`,
     {},
@@ -391,18 +454,22 @@ export function getProduct(config: AgoraRuntimeConfig, productCode: string) {
 }
 
 export function createCart(config: AgoraRuntimeConfig, accessToken: string) {
-  return request<CartResponse>(
-    config,
-    '/nodics/cart/v0/carts',
-    {
-      method: 'POST',
-      headers: { authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ storeCode: config.storeCode, locale: config.locale, currency: 'USD' }),
-    },
-  );
+  return request<CartResponse>(config, "/nodics/cart/v0/carts", {
+    method: "POST",
+    headers: { authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({
+      storeCode: config.storeCode,
+      locale: config.locale,
+      currency: config.currency,
+    }),
+  });
 }
 
-export function readCart(config: AgoraRuntimeConfig, accessToken: string, cartCode: string) {
+export function readCart(
+  config: AgoraRuntimeConfig,
+  accessToken: string,
+  cartCode: string,
+) {
   return request<CartResponse>(
     config,
     `/nodics/cart/v0/carts/${encodeURIComponent(cartCode)}`,
@@ -414,13 +481,18 @@ export function addCartEntry(
   config: AgoraRuntimeConfig,
   accessToken: string,
   cartCode: string,
-  entry: { readonly productCode: string; readonly variantCode?: string; readonly sku?: string; readonly quantity: string },
+  entry: {
+    readonly productCode: string;
+    readonly variantCode?: string;
+    readonly sku?: string;
+    readonly quantity: string;
+  },
 ) {
   return request<CartResponse>(
     config,
     `/nodics/cart/v0/carts/${encodeURIComponent(cartCode)}/entries`,
     {
-      method: 'POST',
+      method: "POST",
       headers: { authorization: `Bearer ${accessToken}` },
       body: JSON.stringify(entry),
     },
@@ -438,7 +510,7 @@ export function updateCartEntry(
     config,
     `/nodics/cart/v0/carts/${encodeURIComponent(cartCode)}/entries/${encodeURIComponent(entryCode)}`,
     {
-      method: 'PATCH',
+      method: "PATCH",
       headers: { authorization: `Bearer ${accessToken}` },
       body: JSON.stringify({ quantity }),
     },
@@ -455,25 +527,38 @@ export function removeCartEntry(
     config,
     `/nodics/cart/v0/carts/${encodeURIComponent(cartCode)}/entries/${encodeURIComponent(entryCode)}`,
     {
-      method: 'DELETE',
+      method: "DELETE",
       headers: { authorization: `Bearer ${accessToken}` },
     },
   );
 }
 
-export function calculateCart(config: AgoraRuntimeConfig, accessToken: string, cartCode: string, expectedRevision?: string, couponCode?: string) {
+export function calculateCart(
+  config: AgoraRuntimeConfig,
+  accessToken: string,
+  cartCode: string,
+  expectedRevision?: string,
+  couponCode?: string,
+) {
   return request<CartCalculationResponse>(
     config,
     `/nodics/cart/v0/carts/${encodeURIComponent(cartCode)}/calculations`,
     {
-      method: 'POST',
+      method: "POST",
       headers: { authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ expectedRevision, ...(couponCode ? { couponCode } : {}) }),
+      body: JSON.stringify({
+        expectedRevision,
+        ...(couponCode ? { couponCode } : {}),
+      }),
     },
   );
 }
 
-export function readShoppingList(config: AgoraRuntimeConfig, accessToken: string, listType: ShoppingListType) {
+export function readShoppingList(
+  config: AgoraRuntimeConfig,
+  accessToken: string,
+  listType: ShoppingListType,
+) {
   return request<ShoppingListResponse>(
     config,
     `/nodics/shoppingList/v0/lists/${encodeURIComponent(listType)}`,
@@ -492,9 +577,13 @@ export function addShoppingListEntry(
     config,
     `/nodics/shoppingList/v0/lists/${encodeURIComponent(listType)}/entries`,
     {
-      method: 'POST',
+      method: "POST",
       headers: { authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ ...entry, storeCode: config.storeCode, locale: config.locale }),
+      body: JSON.stringify({
+        ...entry,
+        storeCode: config.storeCode,
+        locale: config.locale,
+      }),
     },
   );
 }
@@ -509,7 +598,7 @@ export function removeShoppingListEntry(
     config,
     `/nodics/shoppingList/v0/lists/${encodeURIComponent(listType)}/entries/${encodeURIComponent(entryCode)}`,
     {
-      method: 'DELETE',
+      method: "DELETE",
       headers: { authorization: `Bearer ${accessToken}` },
     },
     { storeCode: config.storeCode, locale: config.locale },
@@ -529,9 +618,9 @@ export function previewPromotion(
 ) {
   return request<PromotionPreviewResponse>(
     config,
-    '/nodics/promotion/v0/promotions/preview',
+    "/nodics/promotion/v0/promotions/preview",
     {
-      method: 'POST',
+      method: "POST",
       headers: { authorization: `Bearer ${accessToken}` },
       body: JSON.stringify(payload),
     },
@@ -552,9 +641,9 @@ export function applyPromotion(
 ) {
   return request<PromotionPreviewResponse>(
     config,
-    '/nodics/promotion/v0/promotions/apply',
+    "/nodics/promotion/v0/promotions/apply",
     {
-      method: 'POST',
+      method: "POST",
       headers: { authorization: `Bearer ${accessToken}` },
       body: JSON.stringify(payload),
     },
@@ -562,11 +651,17 @@ export function applyPromotion(
 }
 
 export function listShippingMethods(config: AgoraRuntimeConfig) {
-  return request<ShippingMethodResponse>(config, '/nodics/fulfillmentCore/v0/shipping/methods');
+  return request<ShippingMethodResponse>(
+    config,
+    "/nodics/fulfillmentCore/v0/shipping/methods",
+  );
 }
 
 export function listReturnMethods(config: AgoraRuntimeConfig) {
-  return request<ReturnMethodResponse>(config, '/nodics/fulfillmentCore/v0/returns/methods');
+  return request<ReturnMethodResponse>(
+    config,
+    "/nodics/fulfillmentCore/v0/returns/methods",
+  );
 }
 
 export function placeCheckout(
@@ -577,19 +672,23 @@ export function placeCheckout(
 ) {
   return request<CheckoutPlacementResponse>(
     config,
-    '/nodics/checkoutCore/v0/checkouts/place',
+    "/nodics/checkoutCore/v0/checkouts/place",
     {
-      method: 'POST',
+      method: "POST",
       headers: {
         authorization: `Bearer ${accessToken}`,
-        'idempotency-key': idempotencyKey,
+        "idempotency-key": idempotencyKey,
       },
       body: JSON.stringify(payload),
     },
   );
 }
 
-export function readCustomerOrder(config: AgoraRuntimeConfig, accessToken: string, orderCode: string) {
+export function readCustomerOrder(
+  config: AgoraRuntimeConfig,
+  accessToken: string,
+  orderCode: string,
+) {
   return request<CustomerOrderDetailResponse>(
     config,
     `/nodics/order/v0/orders/${encodeURIComponent(orderCode)}`,
@@ -597,28 +696,38 @@ export function readCustomerOrder(config: AgoraRuntimeConfig, accessToken: strin
   );
 }
 
-export function listCustomerOrders(config: AgoraRuntimeConfig, accessToken: string) {
+export function listCustomerOrders(
+  config: AgoraRuntimeConfig,
+  accessToken: string,
+) {
   return request<readonly CustomerOrderSummary[]>(
     config,
-    '/nodics/order/v0/orders',
+    "/nodics/order/v0/orders",
     { headers: { authorization: `Bearer ${accessToken}` } },
   );
 }
 
-export function listDigitalEntitlements(config: AgoraRuntimeConfig, accessToken: string) {
+export function listDigitalEntitlements(
+  config: AgoraRuntimeConfig,
+  accessToken: string,
+) {
   return request<DigitalEntitlementResponse>(
     config,
-    '/nodics/digitalCore/v0/entitlements',
+    "/nodics/digitalCore/v0/entitlements",
     { headers: { authorization: `Bearer ${accessToken}` } },
   );
 }
 
-export function revealDigitalEntitlement(config: AgoraRuntimeConfig, accessToken: string, entitlementCode: string) {
+export function revealDigitalEntitlement(
+  config: AgoraRuntimeConfig,
+  accessToken: string,
+  entitlementCode: string,
+) {
   return request<DigitalRevealResponse>(
     config,
     `/nodics/digitalCore/v0/entitlements/${encodeURIComponent(entitlementCode)}/reveal`,
     {
-      method: 'POST',
+      method: "POST",
       headers: { authorization: `Bearer ${accessToken}` },
       body: JSON.stringify({}),
     },
@@ -635,7 +744,7 @@ export function previewOrderLifecycleRequest(
     config,
     `/nodics/order/v0/orders/${encodeURIComponent(orderCode)}/lifecycle/preview`,
     {
-      method: 'POST',
+      method: "POST",
       headers: { authorization: `Bearer ${accessToken}` },
       body: JSON.stringify(payload),
     },
@@ -653,14 +762,21 @@ export function createOrderLifecycleRequest(
     config,
     `/nodics/order/v0/orders/${encodeURIComponent(orderCode)}/lifecycle`,
     {
-      method: 'POST',
-      headers: { authorization: `Bearer ${accessToken}`, 'idempotency-key': idempotencyKey },
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "idempotency-key": idempotencyKey,
+      },
       body: JSON.stringify(payload),
     },
   );
 }
 
-export function listOrderLifecycleRequests(config: AgoraRuntimeConfig, accessToken: string, orderCode: string) {
+export function listOrderLifecycleRequests(
+  config: AgoraRuntimeConfig,
+  accessToken: string,
+  orderCode: string,
+) {
   return request<readonly OrderLifecycleResponse[]>(
     config,
     `/nodics/order/v0/orders/${encodeURIComponent(orderCode)}/lifecycle`,

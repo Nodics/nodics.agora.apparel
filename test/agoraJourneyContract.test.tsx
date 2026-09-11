@@ -4,6 +4,25 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { StorefrontPage } from "../src/pages/StorefrontPage";
 
+async function enterTestCustomer(user: ReturnType<typeof userEvent.setup>) {
+  await user.clear(screen.getByLabelText("First name"));
+  await user.type(screen.getByLabelText("First name"), "Test");
+  await user.clear(screen.getByLabelText("Last name"));
+  await user.type(screen.getByLabelText("Last name"), "Customer");
+}
+async function enterTestShipping(user: ReturnType<typeof userEvent.setup>) {
+  for (const [label, value] of [
+    ["Address line 1", "Local test fixture"],
+    ["City", "Dubai"],
+    ["Region", "Dubai"],
+    ["Postal code", "00000"],
+    ["Country", "AE"],
+  ]) {
+    await user.clear(screen.getByLabelText(label));
+    await user.type(screen.getByLabelText(label), value);
+  }
+}
+
 function jsonResponse(body: unknown) {
   return new Response(JSON.stringify(body), {
     status: 200,
@@ -92,7 +111,10 @@ function agoraCmsPageResponse() {
               },
               utilityLinks: [
                 { label: "+1 315-666-6688", path: "tel:+13156666688" },
-                { label: "support@nodics.com", path: "mailto:support@nodics.com" },
+                {
+                  label: "support@nodics.com",
+                  path: "mailto:support@nodics.com",
+                },
                 { label: "Our Store", collectionCode: "agoraWomen" },
               ],
               preferences: [
@@ -103,7 +125,11 @@ function agoraCmsPageResponse() {
                 { label: "Home", path: "/" },
                 { label: "Shop", collectionCode: "agoraWomen", dropdown: true },
                 { label: "New in", collectionCode: "agoraNewArrivals" },
-                { label: "Clothing", collectionCode: "agoraWomenTops", dropdown: true },
+                {
+                  label: "Clothing",
+                  collectionCode: "agoraWomenTops",
+                  dropdown: true,
+                },
                 {
                   label: "Bags & Accessories",
                   collectionCode: "agoraWomenAccessories",
@@ -177,9 +203,13 @@ function agoraCmsPageResponse() {
             {
               eyebrow: "Curated Apparel Edits",
               heading: "Collections you might like",
-              summary: "Choose a category, brand-inspired edit, or seasonal collection.",
+              summary:
+                "Choose a category, brand-inspired edit, or seasonal collection.",
               primaryAction: { label: "Shop all products", path: "/shop" },
-              secondaryAction: { label: "Start from featured edit", collectionCode: "agoraWomen" },
+              secondaryAction: {
+                label: "Start from featured edit",
+                collectionCode: "agoraWomen",
+              },
               heroMediaCode: "agora-home-hero-layered-edit",
               highlights: [
                 {
@@ -202,7 +232,10 @@ function agoraCmsPageResponse() {
                 "A merchandised listing experience that blends editorial content with live Commerce discovery.",
               heroMediaCode: "agora-home-hero-signature-style",
               heroSupportingMedia: [
-                { mediaCode: "agora-product-double-button-trench", position: 20 },
+                {
+                  mediaCode: "agora-product-double-button-trench",
+                  position: 20,
+                },
                 { mediaCode: "agora-product-soft-shoulder-bag", position: 30 },
               ],
               primaryAction: {
@@ -518,7 +551,9 @@ describe("Agora storefront journey", () => {
               brand: "Nodics Atelier",
               price: { currency: "USD", unitAmount: "129" },
               availability: { available: true, status: "IN_STOCK" },
-              variantCodes: linenWrapDressApparel.options.map((option) => option.variantCode),
+              variantCodes: linenWrapDressApparel.options.map(
+                (option) => option.variantCode,
+              ),
               defaultVariantCode: "agoraLinenWrapDressIvoryS",
               apparel: linenWrapDressApparel,
             },
@@ -529,26 +564,45 @@ describe("Agora storefront journey", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<StorefrontPage />);
-    await waitFor(() => expect(screen.getAllByText("Linen Wrap Dress").length).toBeGreaterThan(0));
-    await user.click(screen.getByRole("button", { name: "View All Collection" }));
+    await waitFor(() =>
+      expect(screen.getAllByText("Linen Wrap Dress").length).toBeGreaterThan(0),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "View All Collection" }),
+    );
 
     expect(window.location.pathname).toBe("/collections");
     await screen.findByRole("region", { name: "Available collections" });
     expect(screen.getByText("Start with intent")).toBeTruthy();
-    expect(screen.getByText("Every edit resolves into indexed Commerce products.")).toBeTruthy();
-    expect(fetchMock.mock.calls.some(([target]) => new URL(String(target)).searchParams.get("path") === "/collections")).toBe(true);
+    expect(
+      screen.getByText("Every edit resolves into indexed Commerce products."),
+    ).toBeTruthy();
+    expect(
+      fetchMock.mock.calls.some(
+        ([target]) =>
+          new URL(String(target)).searchParams.get("path") === "/collections",
+      ),
+    ).toBe(true);
 
-    const collectionIndex = screen.getByRole("region", { name: "Available collections" });
-    await user.click(within(collectionIndex).getByRole("button", { name: /New in/i }));
+    const collectionIndex = screen.getByRole("region", {
+      name: "Available collections",
+    });
+    await user.click(
+      within(collectionIndex).getByRole("button", { name: /New in/i }),
+    );
 
     expect(window.location.pathname).toBe("/shop");
     expect(window.location.search).toContain("collection=agoraNewArrivals");
     await waitFor(() => {
-      expect(fetchMock.mock.calls.some(([target]) => {
-        const url = new URL(String(target));
-        return url.pathname.includes("/products/discovery") &&
-          url.searchParams.get("collectionCode") === "agoraNewArrivals";
-      })).toBe(true);
+      expect(
+        fetchMock.mock.calls.some(([target]) => {
+          const url = new URL(String(target));
+          return (
+            url.pathname.includes("/products/discovery") &&
+            url.searchParams.get("collectionCode") === "agoraNewArrivals"
+          );
+        }),
+      ).toBe(true);
     });
   });
 
@@ -566,7 +620,9 @@ describe("Agora storefront journey", () => {
                 productCode: "agoraLinenWrapDress",
                 name: "Linen Wrap Dress",
                 description: "Linen dress",
-                variantCodes: linenWrapDressApparel.options.map((option) => option.variantCode),
+                variantCodes: linenWrapDressApparel.options.map(
+                  (option) => option.variantCode,
+                ),
                 defaultVariantCode: "agoraLinenWrapDressIvoryS",
                 price: { currency: "USD", unitAmount: "129" },
                 availability: { available: true, status: "IN_STOCK" },
@@ -585,7 +641,9 @@ describe("Agora storefront journey", () => {
                 brand: "Nodics Atelier",
                 price: { currency: "USD", unitAmount: "129" },
                 availability: { available: true, status: "IN_STOCK" },
-                variantCodes: linenWrapDressApparel.options.map((option) => option.variantCode),
+                variantCodes: linenWrapDressApparel.options.map(
+                  (option) => option.variantCode,
+                ),
                 defaultVariantCode: "agoraLinenWrapDressIvoryS",
                 apparel: linenWrapDressApparel,
               },
@@ -596,17 +654,31 @@ describe("Agora storefront journey", () => {
     );
 
     render(<StorefrontPage />);
-    await waitFor(() => expect(screen.getAllByText("Linen Wrap Dress").length).toBeGreaterThan(0));
-    await user.click(screen.getAllByRole("button", { name: /Quick Add Linen Wrap Dress/i })[0]);
+    await waitFor(() =>
+      expect(screen.getAllByText("Linen Wrap Dress").length).toBeGreaterThan(0),
+    );
+    await user.click(
+      screen.getAllByRole("button", { name: /Quick Add Linen Wrap Dress/i })[0],
+    );
 
-    const quickAddDialog = await screen.findByRole("dialog", { name: /Quick add Linen Wrap Dress/i });
-    await user.click(within(quickAddDialog).getByRole("button", { name: "Select Black" }));
+    const quickAddDialog = await screen.findByRole("dialog", {
+      name: /Quick add Linen Wrap Dress/i,
+    });
+    await user.click(
+      within(quickAddDialog).getByRole("button", { name: "Select Black" }),
+    );
     await user.click(within(quickAddDialog).getByRole("button", { name: "M" }));
-    await user.click(within(quickAddDialog).getByRole("button", { name: "Increase quantity" }));
-    await user.click(within(quickAddDialog).getByRole("button", { name: /Add to cart - USD 129/i }));
+    await user.click(
+      within(quickAddDialog).getByRole("button", { name: "Increase quantity" }),
+    );
+    await user.click(
+      within(quickAddDialog).getByRole("button", {
+        name: /Add to cart - USD 129/i,
+      }),
+    );
     await user.click(screen.getByRole("button", { name: /Cart \(2\)/ }));
 
-    expect(screen.getByText("Variant: agoraLinenWrapDressBlackM")).toBeTruthy();
+    expect(screen.getByText("black · M")).toBeTruthy();
     expect(screen.getByText("Quantity: 2")).toBeTruthy();
   });
 
@@ -618,7 +690,9 @@ describe("Agora storefront journey", () => {
         if (isCmsPageRequest(input)) {
           const response = await agoraCmsPageResponse();
           const payload = await response.json();
-          const header = payload.result.page.components.find((item: { renderer: string }) => item.renderer === "agora.header");
+          const header = payload.result.page.components.find(
+            (item: { renderer: string }) => item.renderer === "agora.header",
+          );
           header.properties.storefrontLabels.quickAdd = "Choose options";
           header.properties.storefrontLabels.addToCart = "Add selected style";
           header.properties.storefrontLabels.buyNow = "Buy selected style";
@@ -634,7 +708,9 @@ describe("Agora storefront journey", () => {
                 brand: "Nodics Atelier",
                 price: { currency: "USD", unitAmount: "129" },
                 availability: { available: true, status: "IN_STOCK" },
-                variantCodes: linenWrapDressApparel.options.map((option) => option.variantCode),
+                variantCodes: linenWrapDressApparel.options.map(
+                  (option) => option.variantCode,
+                ),
                 defaultVariantCode: "agoraLinenWrapDressIvoryS",
                 apparel: linenWrapDressApparel,
               },
@@ -645,12 +721,28 @@ describe("Agora storefront journey", () => {
     );
 
     render(<StorefrontPage />);
-    await waitFor(() => expect(screen.getAllByText("Linen Wrap Dress").length).toBeGreaterThan(0));
-    await user.click(screen.getAllByRole("button", { name: /Choose options Linen Wrap Dress/i })[0]);
+    await waitFor(() =>
+      expect(screen.getAllByText("Linen Wrap Dress").length).toBeGreaterThan(0),
+    );
+    await user.click(
+      screen.getAllByRole("button", {
+        name: /Choose options Linen Wrap Dress/i,
+      })[0],
+    );
 
-    const quickAddDialog = await screen.findByRole("dialog", { name: /Choose options Linen Wrap Dress/i });
-    expect(within(quickAddDialog).getByRole("button", { name: /Add selected style - USD 129/i })).toBeTruthy();
-    expect(within(quickAddDialog).getByRole("button", { name: "Buy selected style" })).toBeTruthy();
+    const quickAddDialog = await screen.findByRole("dialog", {
+      name: /Choose options Linen Wrap Dress/i,
+    });
+    expect(
+      within(quickAddDialog).getByRole("button", {
+        name: /Add selected style - USD 129/i,
+      }),
+    ).toBeTruthy();
+    expect(
+      within(quickAddDialog).getByRole("button", {
+        name: "Buy selected style",
+      }),
+    ).toBeTruthy();
   });
 
   it("opens a coupon product directly from a business-authored mega-menu tile", async () => {
@@ -662,25 +754,43 @@ describe("Agora storefront journey", () => {
         if (isCmsPageRequest(input)) {
           const response = await agoraCmsPageResponse();
           const payload = await response.json();
-          const header = payload.result.page.components.find((item: { renderer: string }) => item.renderer === "agora.header");
-          header.properties.megaMenus = [{
-            code: "digital-coupons",
-            label: "Digital Coupons",
-            collectionCode: "agoraDigitalCoupons",
-            eyebrow: "Coupon marketplace",
-            summary: "Buy future-use coupon codes.",
-            groups: [{
-              title: "Buy coupon codes",
-              links: [{ label: "Style Pass 5%", productCode: "agoraStylePass5Coupon", summary: "Future-use discount code", badge: "5%" }],
-            }],
-            featureTiles: [{
-              title: "Coupon spotlight",
-              summary: "Buy a future-use code",
-              mediaCode: "agora-owned-product-coupon-style-pass",
-              action: { label: "View coupon", productCode: "agoraStylePass5Coupon" },
-              badge: "Digital",
-            }],
-          }];
+          const header = payload.result.page.components.find(
+            (item: { renderer: string }) => item.renderer === "agora.header",
+          );
+          header.properties.megaMenus = [
+            {
+              code: "digital-coupons",
+              label: "Digital Coupons",
+              collectionCode: "agoraDigitalCoupons",
+              eyebrow: "Coupon marketplace",
+              summary: "Buy future-use coupon codes.",
+              groups: [
+                {
+                  title: "Buy coupon codes",
+                  links: [
+                    {
+                      label: "Style Pass 5%",
+                      productCode: "agoraStylePass5Coupon",
+                      summary: "Future-use discount code",
+                      badge: "5%",
+                    },
+                  ],
+                },
+              ],
+              featureTiles: [
+                {
+                  title: "Coupon spotlight",
+                  summary: "Buy a future-use code",
+                  mediaCode: "agora-owned-product-coupon-style-pass",
+                  action: {
+                    label: "View coupon",
+                    productCode: "agoraStylePass5Coupon",
+                  },
+                  badge: "Digital",
+                },
+              ],
+            },
+          ];
           return jsonResponse(payload);
         }
         if (target.includes("/products/agoraStylePass5Coupon")) {
@@ -704,15 +814,42 @@ describe("Agora storefront journey", () => {
     );
 
     render(<StorefrontPage />);
-    await user.hover(await screen.findByRole("button", { name: /Digital Coupons/i }));
-    await user.click(await screen.findByRole("button", { name: /Coupon spotlight/i }));
+    const menuTrigger = await screen.findByRole("button", {
+      name: /Digital Coupons/i,
+    });
+    await user.hover(menuTrigger);
+    await user.click(menuTrigger);
+    expect(
+      screen.getByRole("region", { name: "Digital Coupons menu" }),
+    ).toBeTruthy();
+    await user.keyboard("{Escape}");
+    expect(
+      screen.queryByRole("region", { name: "Digital Coupons menu" }),
+    ).toBeNull();
+    await user.keyboard("{Enter}");
+    expect(
+      screen.getByRole("region", { name: "Digital Coupons menu" }),
+    ).toBeTruthy();
+    await user.click(
+      await screen.findByRole("button", { name: /Coupon spotlight/i }),
+    );
 
-    expect(await screen.findByRole("heading", { name: "Agora Style Pass 5 Percent Coupon" })).toBeTruthy();
-    expect(window.location.pathname).toBe("/products/agora-style-pass-5-percent-coupon");
+    expect(
+      await screen.findByRole("heading", {
+        name: "Agora Style Pass 5 Percent Coupon",
+      }),
+    ).toBeTruthy();
+    expect(window.location.pathname).toBe(
+      "/products/agora-style-pass-5-percent-coupon",
+    );
   });
 
   it("resolves a hard-refreshed coupon PDP route from Product discovery", async () => {
-    window.history.pushState({}, "", "/products/agora-style-pass-5-percent-coupon");
+    window.history.pushState(
+      {},
+      "",
+      "/products/agora-style-pass-5-percent-coupon",
+    );
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
@@ -734,14 +871,19 @@ describe("Agora storefront journey", () => {
             },
           });
         }
-        if (target.includes("/products/discovery") && new URL(target).searchParams.get("q")) {
+        if (
+          target.includes("/products/discovery") &&
+          new URL(target).searchParams.get("q")
+        ) {
           return jsonResponse({
             data: {
-              products: [{
-                productCode: "agoraStylePass5Coupon",
-                name: "Agora Style Pass 5 Percent Coupon",
-                slug: "agora-style-pass-5-percent-coupon",
-              }],
+              products: [
+                {
+                  productCode: "agoraStylePass5Coupon",
+                  name: "Agora Style Pass 5 Percent Coupon",
+                  slug: "agora-style-pass-5-percent-coupon",
+                },
+              ],
             },
           });
         }
@@ -751,38 +893,58 @@ describe("Agora storefront journey", () => {
 
     render(<StorefrontPage />);
 
-    expect(await screen.findByRole("heading", { name: "Agora Style Pass 5 Percent Coupon" })).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", {
+        name: "Agora Style Pass 5 Percent Coupon",
+      }),
+    ).toBeTruthy();
   });
 
   it("lists purchased coupon entitlements and reveals a customer-owned coupon code", async () => {
     const user = userEvent.setup();
-    window.localStorage.setItem("nodics.storefront.customerSession", JSON.stringify({
-      accessToken: "signed-in-customer-token",
-      mode: "authenticated",
-      customerId: "alex@example.com",
-      email: "alex@example.com",
-    }));
+    window.localStorage.setItem(
+      "nodics.storefront.customerSession",
+      JSON.stringify({
+        accessToken: "signed-in-customer-token",
+        mode: "authenticated",
+        customerId: "alex@example.com",
+        email: "alex@example.com",
+      }),
+    );
     window.history.pushState({}, "", "/coupons");
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
         const target = String(input);
         if (isCmsPageRequest(input)) return agoraCmsPageResponse();
-        if (target.includes("/nodics/digitalCore/v0/entitlements/entitlement-1/reveal")) {
-          return jsonResponse({ data: { entitlementCode: "entitlement-1", couponCode: "agoraStylePass5Batch001-0001", status: "REVEALED", token: "AGORA5-0001" } });
+        if (
+          target.includes(
+            "/nodics/digitalCore/v0/entitlements/entitlement-1/reveal",
+          )
+        ) {
+          return jsonResponse({
+            data: {
+              entitlementCode: "entitlement-1",
+              couponCode: "agoraStylePass5Batch001-0001",
+              status: "REVEALED",
+              token: "AGORA5-0001",
+            },
+          });
         }
         if (target.endsWith("/nodics/digitalCore/v0/entitlements")) {
           return jsonResponse({
             data: {
-              entitlements: [{
-                code: "entitlement-1",
-                productCode: "agoraStylePass5Coupon",
-                orderCode: "order-1",
-                status: "ACTIVE",
-                claimStatus: "UNCLAIMED",
-                digitalDeliveryType: "COUPON_CODE",
-                providerCode: "agoraStylePass5Batch001-0001",
-              }],
+              entitlements: [
+                {
+                  code: "entitlement-1",
+                  productCode: "agoraStylePass5Coupon",
+                  orderCode: "order-1",
+                  status: "ACTIVE",
+                  claimStatus: "UNCLAIMED",
+                  digitalDeliveryType: "COUPON_CODE",
+                  providerCode: "agoraStylePass5Batch001-0001",
+                },
+              ],
             },
           });
         }
@@ -791,13 +953,19 @@ describe("Agora storefront journey", () => {
     );
 
     render(<StorefrontPage />);
-    expect(await screen.findByRole("heading", { name: "My Coupon Codes" })).toBeTruthy();
-    expect(await screen.findByText(/Purchased from order order-1/)).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { name: "My Coupon Codes" }),
+    ).toBeTruthy();
+    expect(
+      await screen.findByText(/Purchased from order order-1/),
+    ).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Reveal code" }));
     expect(await screen.findByText("AGORA5-0001")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Use at checkout" }));
-    expect(await screen.findByText("Coupon code added to checkout.")).toBeTruthy();
+    expect(
+      await screen.findByText("Coupon code added to checkout."),
+    ).toBeTruthy();
   });
 
   it("renders Home to PLP to PDP to authenticated checkout against backend API contracts", async () => {
@@ -1056,11 +1224,7 @@ describe("Agora storefront journey", () => {
             { status: 200, headers: { "content-type": "application/json" } },
           );
         }
-        if (
-          target.includes(
-            "/orders/storefront-order-confirmed/lifecycle",
-          )
-        ) {
+        if (target.includes("/orders/storefront-order-confirmed/lifecycle")) {
           return new Response(
             JSON.stringify({
               data: {
@@ -1108,8 +1272,14 @@ describe("Agora storefront journey", () => {
                 },
               ],
               facets: {
-                brand: ["Nodics Atelier", "Agora Studio"],
-                collection: ["agoraWomen", "agoraWomenAccessories"],
+                brands: [
+                  { code: "Nodics Atelier", count: 1 },
+                  { code: "Agora Studio", count: 1 },
+                ],
+                collections: [
+                  { code: "agoraWomen", count: 1 },
+                  { code: "agoraWomenAccessories", count: 1 },
+                ],
               },
               total: 20,
             },
@@ -1167,8 +1337,12 @@ describe("Agora storefront journey", () => {
       screen.getAllByLabelText("Business projected products").length,
     ).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: "Refine" }));
-    expect(screen.getByRole("dialog", { name: "Product refinements" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Refine products" })).toBeTruthy();
+    expect(
+      screen.getByRole("dialog", { name: "Product refinements" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Refine products" }),
+    ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Agora Studio" }));
     await user.click(screen.getByRole("button", { name: "Apply refinements" }));
     expect(screen.getAllByText("Leather Tote").length).toBeGreaterThan(0);
@@ -1177,11 +1351,13 @@ describe("Agora storefront journey", () => {
       screen.getByLabelText("Arrange products"),
       "price-desc",
     );
-    expect(screen.getAllByText(/Showing \d+-\d+ of 20 products/u).length).toBeGreaterThan(0);
-    await user.click(
-      screen.getByRole("button", { name: "2" }),
-    );
-    expect(screen.getByRole("button", { name: "2" }).getAttribute("aria-current")).toBe("page");
+    expect(
+      screen.getAllByText(/Showing \d+-\d+ of 20 products/u).length,
+    ).toBeGreaterThan(0);
+    await user.click(screen.getByRole("button", { name: "2" }));
+    expect(
+      screen.getByRole("button", { name: "2" }).getAttribute("aria-current"),
+    ).toBe("page");
     await user.click(screen.getAllByRole("button", { name: /Quick view/i })[0]);
     expect(
       screen.getAllByRole("heading", { name: "Leather Tote" }).length,
@@ -1213,9 +1389,7 @@ describe("Agora storefront journey", () => {
       screen.getByRole("heading", { name: "Related pieces" }),
     ).toBeTruthy();
     expect(
-      screen.getByText(
-        /Recommendations are resolved from Commerce product relationships/,
-      ),
+      screen.getByText(/Explore products selected to complement your choice/),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Ivory" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Black" })).toBeTruthy();
@@ -1254,11 +1428,9 @@ describe("Agora storefront journey", () => {
     ).toBe("1");
     expect(screen.getByText(/Subtotal: USD 129.00/)).toBeTruthy();
     expect(
-      screen.getByText(/Promotion eligibility is calculated by Commerce/),
+      screen.getByText(/Eligible offers will be applied at checkout/),
     ).toBeTruthy();
-    expect(
-      screen.getByText(/Local promotion estimate; backend preview unavailable/),
-    ).toBeTruthy();
+    expect(screen.getByText(/Offers could not be checked/)).toBeTruthy();
     await user.click(
       screen.getByRole("button", { name: "Proceed to checkout" }),
     );
@@ -1270,9 +1442,11 @@ describe("Agora storefront journey", () => {
     ).toBeTruthy();
     await user.clear(screen.getByLabelText("Email"));
     await user.type(screen.getByLabelText("Email"), "alex@example.com");
+    await enterTestCustomer(user);
     await user.click(
       screen.getByRole("button", { name: "Continue to shipping" }),
     );
+    await enterTestShipping(user);
     expect(
       screen.getByRole("heading", { name: "Shipping information" }),
     ).toBeTruthy();
@@ -1282,6 +1456,7 @@ describe("Agora storefront journey", () => {
     await user.click(
       screen.getByRole("button", { name: "Continue to payment" }),
     );
+    await user.type(screen.getByLabelText("Name on card"), "Test Customer");
     expect(screen.getByRole("heading", { name: "Payment" })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Review order" }));
     expect(
@@ -1309,8 +1484,8 @@ describe("Agora storefront journey", () => {
     expect(screen.getByText(/Payment: Card ending 4242/)).toBeTruthy();
     expect(screen.getByText(/Total: USD 147.45/)).toBeTruthy();
     expect(
-      screen.getByRole("list", { name: "Completed checkout steps" }),
-    ).toBeTruthy();
+      screen.queryByRole("list", { name: "Completed checkout steps" }),
+    ).toBeNull();
     await user.click(screen.getByRole("button", { name: "View order" }));
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: "My Orders" })).toBeTruthy(),
@@ -1437,12 +1612,15 @@ describe("Agora storefront journey", () => {
     );
     await user.clear(screen.getByLabelText("Email"));
     await user.type(screen.getByLabelText("Email"), "alex@example.com");
+    await enterTestCustomer(user);
     await user.click(
       screen.getByRole("button", { name: "Continue to shipping" }),
     );
+    await enterTestShipping(user);
     await user.click(
       screen.getByRole("button", { name: "Continue to payment" }),
     );
+    await user.type(screen.getByLabelText("Name on card"), "Test Customer");
     await user.click(screen.getByRole("button", { name: "Review order" }));
     await user.click(screen.getByRole("button", { name: "Place order" }));
 
@@ -1488,9 +1666,7 @@ describe("Agora storefront journey", () => {
           });
         }
         if (
-          target.includes(
-            "/nodics/cart/v0/carts/agora-cart-live-1/entries",
-          )
+          target.includes("/nodics/cart/v0/carts/agora-cart-live-1/entries")
         ) {
           return jsonResponse({
             data: {
@@ -1512,9 +1688,7 @@ describe("Agora storefront journey", () => {
             },
           });
         }
-        if (
-          target.includes("/nodics/shoppingList/v0/lists/WISHLIST")
-        ) {
+        if (target.includes("/nodics/shoppingList/v0/lists/WISHLIST")) {
           return jsonResponse({
             data: {
               list: {
@@ -1597,14 +1771,8 @@ describe("Agora storefront journey", () => {
       ).toBe(true),
     );
     await user.click(screen.getByRole("button", { name: /Cart \(1\)/ }));
-    expect(
-      screen.getByText(/Backend cart agora-cart-live-1 synced from local cart/),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(
-        /Backend wishlist and compare synced for alex@example.com/,
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(/Cart saved to your account/)).toBeTruthy();
+    expect(screen.getByText(/Your saved items are up to date/)).toBeTruthy();
 
     const calls = fetchMock.mock.calls.map(([target, options]) => ({
       target: String(target),
@@ -1635,9 +1803,7 @@ describe("Agora storefront journey", () => {
       ),
     ).toBe(true);
     const addEntryCall = calls.find((call) =>
-      call.target.includes(
-        "/nodics/cart/v0/carts/agora-cart-live-1/entries",
-      ),
+      call.target.includes("/nodics/cart/v0/carts/agora-cart-live-1/entries"),
     );
     expect(addEntryCall?.options.headers).toMatchObject({
       authorization: "Bearer signed-in-customer-token",
@@ -1738,13 +1904,16 @@ describe("Agora storefront journey", () => {
     await user.click(
       screen.getByRole("button", { name: "Proceed to checkout" }),
     );
+    await enterTestCustomer(user);
     await user.click(
       screen.getByRole("button", { name: "Continue to shipping" }),
     );
+    await enterTestShipping(user);
     await user.clear(screen.getByLabelText("Address line 1"));
     await user.click(
       screen.getByRole("button", { name: "Continue to payment" }),
     );
+    await user.type(screen.getByLabelText("Name on card"), "Test Customer");
     await user.click(screen.getByRole("button", { name: "Review order" }));
     await user.click(screen.getByRole("button", { name: "Place order" }));
 
@@ -1768,7 +1937,8 @@ describe("Agora storefront journey", () => {
         if (isCmsPageRequest(input))
           return new Response(
             JSON.stringify({
-              message: "CMS publication pointer was not found: content was not found",
+              message:
+                "CMS publication pointer was not found: content was not found",
             }),
             { status: 404, headers: { "content-type": "application/json" } },
           );
@@ -1785,8 +1955,14 @@ describe("Agora storefront journey", () => {
         }),
       ).toBeTruthy(),
     );
-    expect(screen.queryByRole("link", { name: "Open Axis publishing" })).toBeNull();
-    expect(screen.queryByRole("navigation", { name: "Storefront navigation" })).toBeNull();
-    expect(screen.queryByRole("heading", { name: /Fresh styles just in/i })).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: "Open Axis publishing" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("navigation", { name: "Storefront navigation" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: /Fresh styles just in/i }),
+    ).toBeNull();
   });
 });
