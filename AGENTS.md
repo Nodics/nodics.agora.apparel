@@ -18,3 +18,7 @@ inside this app so the repository remains self-contained.
 - Do not add Electronics or Telco renderer files to this app.
 - Do not commit generated output, media caches, logs, database files, or local
   runtime artifacts.
+
+Frontend startup is independent of backend health. Keep unavailable/retry UI and
+frontend tests in this application. Backend API acceptance must never start or
+test this frontend. Container deployment is owned by [docker/README.md](docker/README.md).

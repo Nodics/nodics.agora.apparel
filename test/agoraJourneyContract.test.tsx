@@ -1930,6 +1930,34 @@ describe("Agora storefront journey", () => {
     ).toBe(false);
   });
 
+  it.each(["http", "network"])(
+    "explains a %s service outage without claiming a content update",
+    async (failure) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL) => {
+          if (isCmsPageRequest(input)) {
+            if (failure === "network") throw new TypeError("Failed to fetch");
+            return new Response("{}", { status: 503 });
+          }
+          return jsonResponse({ data: { products: [] } });
+        }),
+      );
+      render(<StorefrontPage />);
+      expect(
+        await screen.findByRole("heading", {
+          name: "The storefront is temporarily unavailable.",
+        }),
+      ).toBeTruthy();
+      expect(screen.getByText(/cannot reach the service/i)).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+      expect(screen.queryByText(/complete a content update/i)).toBeNull();
+      expect(
+        screen.queryByRole("navigation", { name: "Storefront navigation" }),
+      ).toBeNull();
+    },
+  );
+
   it("shows an unpublished state instead of a local storefront when Online CMS has no page", async () => {
     vi.stubGlobal(
       "fetch",

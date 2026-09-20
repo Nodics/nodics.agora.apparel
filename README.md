@@ -37,3 +37,8 @@ Release CI checks out the frontend and the matching `development` or `master`
 branch of `Nodics/nodics.kickoff` into separate directories. The renderer mapping
 test reads that checkout through `NODICS_KICKOFF_ROOT`; reference backend records
 remain owned by Kickoff. The existing workflow also supports manual dispatch.
+
+Backend outages display a service-unavailable message with a retry action; an
+unpublished CMS page retains its separate maintenance state. These UI contracts
+are tested locally in `test/agoraJourneyContract.test.tsx`. See
+[application-owned Docker startup](docker/README.md).

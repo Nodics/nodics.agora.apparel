@@ -1,0 +1,43 @@
+{
+  "name": "nodics-agora-apparel-local",
+  "services":
+    {
+      "agora-apparel":
+        {
+          "image": "nodics/agora-apparel:docker-local",
+          "build":
+            {
+              "context": "..",
+              "dockerfile": "docker/Dockerfile",
+              "args":
+                {
+                  "STOREFRONT_ORIGIN": "http://localhost:6300",
+                  "STOREFRONT_SITE": "agoraApparelSite",
+                  "STOREFRONT_STORE": "agoraMainStore",
+                  "STOREFRONT_DOMAIN": "apparel",
+                  "STOREFRONT_CURRENCY": "USD",
+                },
+            },
+          "restart": "unless-stopped",
+          "read_only": true,
+          "security_opt": ["no-new-privileges:true"],
+          "tmpfs":
+            [
+              "/var/cache/nginx:rw,noexec,nosuid,size=32m,uid=101,gid=101",
+              "/var/run:rw,noexec,nosuid,size=8m,uid=101,gid=101",
+            ],
+          "ports": ["6300:8080"],
+          "healthcheck":
+            {
+              "test":
+                ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"],
+              "interval": "10s",
+              "timeout": "3s",
+              "retries": 10,
+            },
+          "deploy":
+            { "resources": { "limits": { "memory": "128m", "cpus": "0.50" } } },
+          "extra_hosts": ["host.docker.internal:host-gateway"],
+        },
+    },
+}

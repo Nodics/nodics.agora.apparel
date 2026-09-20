@@ -99,7 +99,7 @@ import {
   type AgoraMediaItem,
   type AgoraMegaMenu,
 } from "../cms/agoraHomeContent";
-import { resolveCmsPage } from "../cms/cmsClient";
+import { CmsPageDeliveryError, resolveCmsPage } from "../cms/cmsClient";
 import type { CmsResolvedPageContract } from "../cms/cmsContract";
 import {
   resolveWcmsExperience,
@@ -788,6 +788,7 @@ export function StorefrontPage() {
   const [cmsExperiencePage, setCmsExperiencePage] =
     useState<CmsResolvedPageContract>();
   const [cmsStatus, setCmsStatus] = useState<string>();
+  const [cmsUnavailable, setCmsUnavailable] = useState(false);
   const [activeMegaMenuCode, setActiveMegaMenuCode] = useState<string>();
   const storefrontHeaderRef = useRef<HTMLElement>(null);
   const [megaMenuTop, setMegaMenuTop] = useState(118);
@@ -925,6 +926,7 @@ export function StorefrontPage() {
   useEffect(() => {
     const controller = new AbortController();
     setCmsStatus("Loading published experience…");
+    setCmsUnavailable(false);
     void resolveCmsPage({
       cmsBaseUrl: runtimeConfig.cmsBaseUrl,
       enterpriseCode: runtimeConfig.enterpriseCode,
@@ -939,9 +941,17 @@ export function StorefrontPage() {
         setCmsPage(page);
         setCmsStatus(undefined);
       })
-      .catch(() => {
+      .catch((failure: unknown) => {
         if (controller.signal.aborted) return;
-        setCmsStatus("Published Agora experience is not available yet.");
+        const unavailable =
+          !(failure instanceof CmsPageDeliveryError) ||
+          failure.kind !== "not-found";
+        setCmsUnavailable(unavailable);
+        setCmsStatus(
+          unavailable
+            ? "The storefront service is temporarily unavailable."
+            : "Published Agora experience is not available yet.",
+        );
       });
     return () => controller.abort();
   }, [cmsPath]);
@@ -2948,18 +2958,31 @@ export function StorefrontPage() {
         >
           <NodicsBrand logoText="NODICS" subtitle="AGORA" />
           <p className="eyebrow">
-            {loading ? "Preparing your experience" : "Storefront maintenance"}
+            {loading
+              ? "Preparing your experience"
+              : cmsUnavailable
+                ? "Service unavailable"
+                : "Storefront maintenance"}
           </p>
           <h1>
             {loading
               ? "Opening the storefront."
-              : "We are getting the storefront ready."}
+              : cmsUnavailable
+                ? "The storefront is temporarily unavailable."
+                : "We are getting the storefront ready."}
           </h1>
           <p>
             {loading
               ? "Thanks for your patience while the latest shopping experience is being prepared."
-              : "The store is not available right now while we complete a content update. Please check back shortly."}
+              : cmsUnavailable
+                ? "We cannot reach the service right now. Please try again shortly."
+                : "The store is not available right now while we complete a content update. Please check back shortly."}
           </p>
+          {cmsUnavailable ? (
+            <button type="button" onClick={() => window.location.reload()}>
+              Try again
+            </button>
+          ) : null}
         </section>
       </main>
     );
