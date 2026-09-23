@@ -14,6 +14,8 @@ export default defineConfig(({ mode }) => {
   if (!allowedSolutions.has(solution)) throw new Error(`Unsupported AGORA_SOLUTION: ${solution}`);
   return { plugins: [react(), compositionPlugin(solution)],
   server: {
+    port: 3300,
+    strictPort: true,
     proxy: {
       '/nodics': {
         target: loadEnv(mode, process.cwd(), '').VITE_STOREFRONT_COMMERCE_PROXY_TARGET ?? 'http://localhost:4350',
