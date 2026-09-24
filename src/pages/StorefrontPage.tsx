@@ -251,6 +251,25 @@ const experienceDevice = function (): string {
   return "desktop";
 };
 
+const LEGACY_AGORA_CATALOGUE_CODES: Readonly<Record<string, string>> =
+  Object.freeze({
+    agoraAccessories: "agoraWomenAccessories",
+    agoraBestSelling: "agoraWomen",
+    agoraBottoms: "agoraWomen",
+    agoraCrossbodyBags: "agoraWomenBags",
+    agoraDresses: "agoraWomenDresses",
+    agoraMenLayers: "agoraMen",
+    agoraOuterwear: "agoraWomenTops",
+    agoraPromotion: "agoraSale",
+    agoraShoes: "agoraWomenAccessories",
+    agoraShoulderBags: "agoraWomenBags",
+    agoraSunglasses: "agoraWomenAccessories",
+  });
+
+const canonicalAgoraCatalogueCode = function (code: string): string {
+  return LEGACY_AGORA_CATALOGUE_CODES[code] ?? code;
+};
+
 const routeStateFromLocation = function (rootCollectionCode = ""): RouteState {
   if (typeof window === "undefined")
     return {
@@ -264,8 +283,12 @@ const routeStateFromLocation = function (rootCollectionCode = ""): RouteState {
   const params = new URLSearchParams(window.location.search);
   const query = params.get("q") ?? "";
   const collection =
-    params.get("collection") ?? params.get("collectionCode") ?? "";
-  const category = params.get("category") ?? params.get("categoryCode") ?? "";
+    canonicalAgoraCatalogueCode(
+      params.get("collection") ?? params.get("collectionCode") ?? "",
+    );
+  const category = canonicalAgoraCatalogueCode(
+    params.get("category") ?? params.get("categoryCode") ?? "",
+  );
   const brand = params.get("brand") ?? params.get("brandCode") ?? "";
   if (path === "/cart")
     return {
@@ -350,7 +373,9 @@ const routeStateFromLocation = function (rootCollectionCode = ""): RouteState {
       query,
     };
   if (path.startsWith("/shop/category/")) {
-    const code = decodeURIComponent(path.slice("/shop/category/".length));
+    const code = canonicalAgoraCatalogueCode(
+      decodeURIComponent(path.slice("/shop/category/".length)),
+    );
     return {
       view: "plp",
       collectionCode: code,
@@ -360,7 +385,9 @@ const routeStateFromLocation = function (rootCollectionCode = ""): RouteState {
     };
   }
   if (path.startsWith("/shop/collection/")) {
-    const code = decodeURIComponent(path.slice("/shop/collection/".length));
+    const code = canonicalAgoraCatalogueCode(
+      decodeURIComponent(path.slice("/shop/collection/".length)),
+    );
     return {
       view: "plp",
       collectionCode: code,
@@ -1386,15 +1413,21 @@ export function StorefrontPage() {
     context: ProductSearchContext = "all",
     code = "",
   ) {
+    const catalogueCode =
+      context === "category" || context === "collection"
+        ? canonicalAgoraCatalogueCode(code)
+        : code;
     const params = new URLSearchParams();
     if (query) params.set("q", query);
-    if (context === "brand" && code) params.set("brand", code);
-    if (context === "category" && code) params.set("category", code);
-    if (context === "collection" && code) params.set("collection", code);
+    if (context === "brand" && catalogueCode) params.set("brand", catalogueCode);
+    if (context === "category" && catalogueCode)
+      params.set("category", catalogueCode);
+    if (context === "collection" && catalogueCode)
+      params.set("collection", catalogueCode);
     setSearchContext(context);
-    setSearchCode(code);
+    setSearchCode(catalogueCode);
     if (context === "category" || context === "collection")
-      setCollectionCode(code);
+      setCollectionCode(catalogueCode);
     setBrand("");
     setSelectedFilters(EMPTY_PRODUCT_FILTERS);
     setListingPage(1);

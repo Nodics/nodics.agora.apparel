@@ -5,11 +5,18 @@ export function mediaDeliveryUrl(mediaBaseUrl: string, mediaCode: string): strin
   return `${baseUrl}/nodics/media/v0/content/${encodeURIComponent(mediaCode)}`;
 }
 
+function absoluteMediaUrl(candidate: string, mediaBaseUrl?: string): string {
+  if (!candidate.startsWith('/')) return candidate;
+  if (!mediaBaseUrl) return candidate;
+  const baseUrl = mediaBaseUrl.endsWith('/') ? mediaBaseUrl.slice(0, -1) : mediaBaseUrl;
+  return `${baseUrl}${candidate}`;
+}
+
 export function productVisualUrl(candidate: unknown, mediaBaseUrl?: string): string | undefined {
   if (typeof candidate === 'object' && candidate !== null && !Array.isArray(candidate)) {
     const media = candidate as MediaDescriptor;
     const deliveredUrl = media.deliveryUrl ?? media.publicUrl ?? media.url;
-    if (deliveredUrl) return deliveredUrl;
+    if (deliveredUrl) return absoluteMediaUrl(deliveredUrl, mediaBaseUrl);
     const mediaCode = media.mediaCode ?? media.code;
     if (mediaBaseUrl && mediaCode) return mediaDeliveryUrl(mediaBaseUrl, mediaCode);
     return undefined;
@@ -17,7 +24,7 @@ export function productVisualUrl(candidate: unknown, mediaBaseUrl?: string): str
   if (typeof candidate !== 'string') return undefined;
   if (/^https?:\/\//u.test(candidate)) return candidate;
   if (/^data:image\//u.test(candidate)) return candidate;
-  if (candidate.startsWith('/')) return candidate;
+  if (candidate.startsWith('/')) return absoluteMediaUrl(candidate, mediaBaseUrl);
   if (mediaBaseUrl && /^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(candidate)) return mediaDeliveryUrl(mediaBaseUrl, candidate);
   return undefined;
 }

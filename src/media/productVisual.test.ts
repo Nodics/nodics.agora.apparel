@@ -31,6 +31,23 @@ describe('product media projection', () => {
     expect(productVisualUrl('agora-owned-product-satin-midi-dress-primary', 'http://localhost:4314')).toBe('http://localhost:4314/nodics/media/v0/content/agora-owned-product-satin-midi-dress-primary');
   });
 
+  it('rebases backend-projected relative media URLs onto the configured media origin', () => {
+    const product: ProductCard = {
+      productCode: 'agoraLinenWrapDress',
+      name: 'Linen Wrap Dress',
+      media: {
+        primary: {
+          mediaCode: 'agora-owned-product-linen-wrap-dress-primary',
+          deliveryUrl: '/nodics/media/v0/content/agora-owned-product-linen-wrap-dress-primary',
+        },
+      },
+    };
+
+    expect(productImageUrl(product, 'http://localhost:4314')).toBe(
+      'http://localhost:4314/nodics/media/v0/content/agora-owned-product-linen-wrap-dress-primary',
+    );
+  });
+
   it('uses business-managed secondary media for product hover imagery', () => {
     const product: ProductCard = {
       productCode: 'agoraLinenWrapDress',
