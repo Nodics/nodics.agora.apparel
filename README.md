@@ -30,8 +30,9 @@ Local fallback data is allowed only for safe development and tests.
 npm run verify
 ```
 
-Local end-to-end topology and data qualification are orchestrated from
-`nodics.kickoff`.
+Start and verify this frontend from its own repository. Kickoff owns backend
+runtime topology and data qualification; backend acceptance does not start or
+test the storefront.
 
 Release CI checks out the frontend and the matching `development` or `master`
 branch of `Nodics/nodics.kickoff` into separate directories. The renderer mapping
@@ -42,3 +43,11 @@ Backend outages display a service-unavailable message with a retry action; an
 unpublished CMS page retains its separate maintenance state. These UI contracts
 are tested locally in `test/agoraJourneyContract.test.tsx`. See
 [application-owned Docker startup](docker/README.md).
+
+## Documentation ownership
+
+Keep frontend setup, renderer and test guidance in this README or the existing
+Docker/test READMEs; do not create a separate frontend `docs/` tree.
+Detailed domain and customer business guides remain backend-owned. See
+[the Agora guide](../../nodics.ai/nodics.docs/docs/pages/accelerators/agora-industry-templates.md)
+and [the apparel reference backend](../../nodics.kickoff/modules/agora.apparel/README.md).
