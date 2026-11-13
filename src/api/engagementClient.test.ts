@@ -14,7 +14,8 @@ const config: AgoraRuntimeConfig = {
   tenantCode: "default",
   siteCode: "agora",
   channel: "web",
-  storeCode: "agoraMainStore",
+  salesChannelCode: "agoraApparelWeb",
+  storeCode: "agoraApparelStore",
   domainCode: "apparel",
   locale: "en",
   requestTimeoutMs: 1000,
@@ -56,7 +57,7 @@ describe("engagementClient", () => {
     expect(lastRequest().target).toContain(
       "http://localhost:4340/nodics/engagementApi/v0/public/review-aggregates/PRODUCT/agoraLinenWrapDress",
     );
-    expect(lastRequest().target).toContain("site=agoraMainStore");
+    expect(lastRequest().target).toContain("site=agoraApparelStore");
     expect(lastRequest().options.headers).toMatchObject({
       "x-enterprise-code": "default",
       "x-tenant-code": "default",

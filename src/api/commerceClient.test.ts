@@ -34,7 +34,8 @@ const config: AgoraRuntimeConfig = {
   tenantCode: "default",
   siteCode: "agora",
   channel: "web",
-  storeCode: "agoraMainStore",
+  salesChannelCode: "agoraApparelWeb",
+  storeCode: "agoraApparelStore",
   domainCode: "apparel",
   locale: "en",
   requestTimeoutMs: 1000,
@@ -66,7 +67,9 @@ describe("commerceClient", () => {
 
   it("defaults Agora runtime to the local storefront proxy rather than direct cross-origin Commerce", () => {
     expect(runtimeConfig.commerceBaseUrl).toBe(window.location.origin);
-    expect(runtimeConfig.storeCode).toBe("agoraMainStore");
+    expect(runtimeConfig.channel).toBe("web");
+    expect(runtimeConfig.salesChannelCode).toBe("agoraApparelWeb");
+    expect(runtimeConfig.storeCode).toBe("agoraApparelStore");
   });
 
   it("builds customer discovery URLs with Store, locale, category, and query context", () => {
@@ -86,7 +89,7 @@ describe("commerceClient", () => {
 
     expect(target.origin).toBe("http://localhost:4350");
     expect(target.pathname).toBe("/nodics/product/v0/products/discovery");
-    expect(target.searchParams.get("storeCode")).toBe("agoraMainStore");
+    expect(target.searchParams.get("storeCode")).toBe("agoraApparelStore");
     expect(target.searchParams.get("locale")).toBe("en");
     expect(target.searchParams.get("categoryCode")).toBe("agoraWomen");
     expect(target.searchParams.get("domainCode")).toBe("apparel");
@@ -112,7 +115,7 @@ describe("commerceClient", () => {
     expect(request.target).toContain(
       "http://localhost:4350/nodics/product/v0/products/discovery",
     );
-    expect(request.target).toContain("storeCode=agoraMainStore");
+    expect(request.target).toContain("storeCode=agoraApparelStore");
     expect(request.target).toContain("page=3");
     expect(request.target).toContain("pageSize=4");
     expect(request.options.headers).toMatchObject({
@@ -173,8 +176,9 @@ describe("commerceClient", () => {
       );
 
     await createCart(config, "customer-token");
+    expect(JSON.parse(String(lastRequest().options.body)).channelCode).toBe(config.salesChannelCode);
     expect(JSON.parse(String(lastRequest().options.body))).toMatchObject({
-      storeCode: "agoraMainStore",
+      storeCode: "agoraApparelStore",
       locale: "en",
       currency: "USD",
     });
@@ -253,7 +257,7 @@ describe("commerceClient", () => {
 
     await readShoppingList(config, "customer-token", "WISHLIST");
     expect(lastRequest().target).toBe(
-      "http://localhost:4350/nodics/shoppingList/v0/lists/WISHLIST?storeCode=agoraMainStore&locale=en",
+      "http://localhost:4350/nodics/shoppingList/v0/lists/WISHLIST?storeCode=agoraApparelStore&locale=en",
     );
     expect(lastRequest().options.headers).toMatchObject({
       authorization: "Bearer customer-token",
@@ -268,7 +272,7 @@ describe("commerceClient", () => {
     );
     expect(JSON.parse(String(lastRequest().options.body))).toMatchObject({
       productCode: "agoraLinenWrapDress",
-      storeCode: "agoraMainStore",
+      storeCode: "agoraApparelStore",
       locale: "en",
     });
 
@@ -279,7 +283,7 @@ describe("commerceClient", () => {
       "entry-1",
     );
     expect(lastRequest().target).toBe(
-      "http://localhost:4350/nodics/shoppingList/v0/lists/WISHLIST/entries/entry-1?storeCode=agoraMainStore&locale=en",
+      "http://localhost:4350/nodics/shoppingList/v0/lists/WISHLIST/entries/entry-1?storeCode=agoraApparelStore&locale=en",
     );
   });
 

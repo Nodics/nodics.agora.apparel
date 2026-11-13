@@ -10,6 +10,7 @@ export interface AgoraRuntimeConfig {
   readonly tenantCode: string;
   readonly siteCode: string;
   readonly channel: string;
+  readonly salesChannelCode: string;
   readonly storeCode: string;
   readonly domainCode: string;
   readonly locale: string;
@@ -47,7 +48,8 @@ export const runtimeConfig: AgoraRuntimeConfig = Object.freeze({
   tenantCode: import.meta.env.VITE_STOREFRONT_TENANT_CODE ?? "default",
   siteCode: import.meta.env.VITE_STOREFRONT_SITE_CODE ?? "agoraApparelSite",
   channel: import.meta.env.VITE_STOREFRONT_CHANNEL ?? "web",
-  storeCode: import.meta.env.VITE_STOREFRONT_STORE_CODE ?? "agoraMainStore",
+  salesChannelCode: import.meta.env.VITE_STOREFRONT_SALES_CHANNEL_CODE ?? "agoraApparelWeb",
+  storeCode: import.meta.env.VITE_STOREFRONT_STORE_CODE ?? "agoraApparelStore",
   domainCode: import.meta.env.VITE_STOREFRONT_DOMAIN_CODE ?? "apparel",
   currency: import.meta.env.VITE_STOREFRONT_CURRENCY ?? "USD",
   locale: import.meta.env.VITE_STOREFRONT_LOCALE ?? "en",

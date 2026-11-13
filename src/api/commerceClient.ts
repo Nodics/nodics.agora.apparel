@@ -458,6 +458,7 @@ export function createCart(config: AgoraRuntimeConfig, accessToken: string) {
     method: "POST",
     headers: { authorization: `Bearer ${accessToken}` },
     body: JSON.stringify({
+      channelCode: config.salesChannelCode,
       storeCode: config.storeCode,
       locale: config.locale,
       currency: config.currency,

@@ -13,7 +13,8 @@
                 {
                   "STOREFRONT_ORIGIN": "http://localhost:6300",
                   "STOREFRONT_SITE": "agoraApparelSite",
-                  "STOREFRONT_STORE": "agoraMainStore",
+                  "STOREFRONT_STORE": "agoraApparelStore",
+                  "STOREFRONT_SALES_CHANNEL": "agoraApparelWeb",
                   "STOREFRONT_DOMAIN": "apparel",
                   "STOREFRONT_CURRENCY": "USD",
                 },
